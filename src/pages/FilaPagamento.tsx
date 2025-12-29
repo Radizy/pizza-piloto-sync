@@ -130,7 +130,11 @@ export default function FilaPagamento() {
           </div>
           <p className="text-3xl font-bold font-mono">{senhasPagas.length}</p>
         </div>
-        <TvPaymentPreview franquiaId={user?.franquiaId ?? null} unidadeNome={selectedUnit as string} />
+        <TvPaymentPreview
+          franquiaId={user?.franquiaId ?? null}
+          unidadeNome={selectedUnit as string}
+          unidadeId={user?.unidadeId ?? null}
+        />
       </div>
 
       {/* Motoboys que aparecem na fila (disponivel) */}
