@@ -25,14 +25,15 @@ export const TVCallAnimation = ({
   useEffect(() => {
     if (!show) return;
 
+    // 1.5s de moto + 3.5s de tela cheia ≈ 5s total
     const timer1 = setTimeout(() => {
       setStage('tela');
-    }, 4000);
+    }, 1500);
 
     const timer2 = setTimeout(() => {
       onComplete();
       setStage('moto');
-    }, 14000);
+    }, 5000);
 
     return () => {
       clearTimeout(timer1);
@@ -100,30 +101,51 @@ export const TVCallAnimation = ({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
             ) : (
-              <svg className="w-24 h-24 md:w-32 md:h-32 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <div className="relative">
+                <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-emerald-500/20 flex items-center justify-center animate-scale-in">
+                  <svg className="w-16 h-16 md:w-20 md:h-20 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+                {/* Partículas de dinheiro */}
+                <div className="absolute inset-0 pointer-events-none">
+                  <div className="animate-[float-money_1.8s_ease-in-out_infinite] text-emerald-300 text-2xl md:text-3xl absolute -left-4 top-0">
+                    R$
+                  </div>
+                  <div className="animate-[float-money_2.1s_ease-in-out_infinite] text-emerald-400 text-xl md:text-2xl absolute right-0 -top-2">
+                    $
+                  </div>
+                  <div className="animate-[float-money_2.4s_ease-in-out_infinite] text-emerald-200 text-2xl md:text-3xl absolute -right-6 bottom-0">
+                    💵
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 
           <h1
             className={`animate-pulse-slow text-[7vw] md:text-[5vw] leading-none font-black ${accentColor} mb-6 tracking-wider`}
           >
-            {tipo === 'PAGAMENTO' ? 'AGORA É SUA VEZ' : 'ENTREGA CHAMADA'}
+            {tipo === 'PAGAMENTO' ? 'PAGAMENTO CHAMADO' : 'ENTREGA CHAMADA'}
           </h1>
 
           <div className="animate-slide-up max-w-5xl mx-auto space-y-4">
-            <p className="text-3xl md:text-4xl text-white/80 font-semibold">
-               {callPhrase
-                 || (tipo === 'PAGAMENTO'
-                   ? `Agora é sua vez, ${nomeMotoboy}!`
-                   : `É a sua vez "${nomeMotoboy}"`)}
-             </p>
-             {isEntrega && (bagPhrase || bagNome) && (
-               <p className="text-2xl md:text-3xl text-white/80 font-semibold">
-                 {bagPhrase || `Pegue a "${bagNome}"`}
-               </p>
-             )}
+            <p className="text-3xl md:text-4xl text-white/80 font-semibold whitespace-pre-line">
+              {callPhrase
+                || (tipo === 'PAGAMENTO'
+                  ? `Senha\n${nomeMotoboy}, é a sua vez de receber!\nVá até o caixa imediatamente.`
+                  : `É a sua vez "${nomeMotoboy}"`)}
+            </p>
+            {isEntrega && (bagPhrase || bagNome) && (
+              <p className="text-2xl md:text-3xl text-white/80 font-semibold">
+                {bagPhrase || `Pegue a "${bagNome}"`}
+              </p>
+            )}
             <p className="text-[6vw] md:text-[4.5vw] font-black text-white tracking-wide break-words">
               {nomeMotoboy}
             </p>
