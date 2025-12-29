@@ -475,7 +475,11 @@ export default function Roteirista() {
           </div>
           <p className="text-3xl font-bold font-mono">{deliveringQueue.length}</p>
         </div>
-        <TvPaymentPreview franquiaId={user?.franquiaId ?? null} unidadeNome={selectedUnit as any} />
+        <TvPaymentPreview
+          franquiaId={user?.franquiaId ?? null}
+          unidadeNome={selectedUnit as any}
+          unidadeId={user?.unidadeId ?? null}
+        />
       </div>
 
       {isLoading ? (
