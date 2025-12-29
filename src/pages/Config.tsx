@@ -15,6 +15,7 @@ import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ModulosConfig } from '@/components/ModulosConfig';
+import { FranquiaFinanceiroPanel } from '@/components/FranquiaFinanceiroPanel';
 import {
   Select,
   SelectContent,
@@ -410,18 +411,7 @@ export default function Config() {
 
         {user?.role === 'admin_franquia' && (
           <TabsContent value="financeiro" className="space-y-4">
-            <div className="bg-card border border-border rounded-lg p-6">
-              <h2 className="text-lg font-mono font-semibold mb-2">Financeiro</h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Renove sua franquia e acompanhe o histórico de renovações configurado pelo super admin.
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <Button type="button">Abrir tela de pagamento</Button>
-                <Button type="button" variant="outline">
-                  Ver histórico de renovações
-                </Button>
-              </div>
-            </div>
+            <FranquiaFinanceiroPanel />
           </TabsContent>
         )}
       </Tabs>
