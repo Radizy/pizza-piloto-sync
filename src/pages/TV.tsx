@@ -638,33 +638,35 @@ export default function TV() {
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 grid lg:grid-cols-2 gap-0 relative">
+      <div className="flex-1 flex flex-col lg:grid lg:grid-cols-2 gap-0 relative">
         {/* Left Column - Queue */}
-        <div className="border-r border-border p-8 overflow-hidden">
-          <h2 className="text-2xl font-bold font-mono mb-6 flex items-center gap-3">
+        <div className="border-b lg:border-b-0 lg:border-r border-border p-4 sm:p-6 lg:p-8 overflow-hidden">
+          <h2 className="text-2xl font-bold font-mono mb-4 sm:mb-6 flex items-center gap-3">
             <div className="w-4 h-4 rounded-full bg-status-available" />
             Fila de Espera ({availableQueue.length})
           </h2>
 
           {availableQueue.length === 0 ? (
-            <div className="flex items-center justify-center h-64">
-              <p className="text-xl text-muted-foreground">Nenhum entregador na fila</p>
+            <div className="flex items-center justify-center h-48 sm:h-64">
+              <p className="text-lg sm:text-xl text-muted-foreground">Nenhum entregador na fila</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {availableQueue.map((entregador, index) => (
                 <div
                   key={entregador.id}
-                  className="flex items-center gap-4 bg-card border border-border rounded-xl p-4 animate-slide-in"
+                  className="flex items-center gap-3 sm:gap-4 bg-card border border-border rounded-xl p-3 sm:p-4 animate-slide-in"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
-                  <div className="w-14 h-14 rounded-full bg-secondary flex items-center justify-center text-2xl font-bold font-mono">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-secondary flex items-center justify-center text-xl sm:text-2xl font-bold font-mono">
                     {index + 1}
                   </div>
-                  <div className="flex-1">
-                    <p className="text-xl font-semibold">{entregador.nome}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-lg sm:text-xl font-semibold truncate">
+                      {entregador.nome}
+                    </p>
                   </div>
-                  <div className="w-3 h-3 rounded-full bg-status-available" />
+                  <div className="w-3 h-3 rounded-full bg-status-available flex-shrink-0" />
                 </div>
               ))}
             </div>
@@ -672,49 +674,49 @@ export default function TV() {
         </div>
 
         {/* Right Column - Em Entrega com botão Voltar para Fila */}
-        <div className="p-8 overflow-hidden">
-          <h2 className="text-2xl font-bold font-mono mb-6 flex items-center gap-3">
+        <div className="p-4 sm:p-6 lg:p-8 overflow-hidden">
+          <h2 className="text-2xl font-bold font-mono mb-4 sm:mb-6 flex items-center gap-3">
             <div className="w-4 h-4 rounded-full bg-status-delivering" />
             Em Entrega ({deliveringQueue.length})
           </h2>
 
           {deliveringQueue.length === 0 ? (
-            <div className="flex items-center justify-center h-64">
+            <div className="flex items-center justify-center h-48 sm:h-64">
               <div className="text-center">
-                <div className="w-24 h-24 rounded-full bg-secondary mx-auto mb-4 flex items-center justify-center">
-                  <User className="w-12 h-12 text-muted-foreground" />
+                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-secondary mx-auto mb-4 flex items-center justify-center">
+                  <User className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground" />
                 </div>
-                <p className="text-xl text-muted-foreground">Nenhum entregador em entrega</p>
+                <p className="text-lg sm:text-xl text-muted-foreground">Nenhum entregador em entrega</p>
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {deliveringQueue.map((entregador, index) => (
                 <div
                   key={entregador.id}
-                  className="flex items-center gap-4 bg-card border border-border rounded-xl p-4"
+                  className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 bg-card border border-border rounded-xl p-3 sm:p-4"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
-                  <div className="w-14 h-14 rounded-full bg-status-delivering/20 flex items-center justify-center">
+                  <div className="w-14 h-14 rounded-full bg-status-delivering/20 flex items-center justify-center mx-auto sm:mx-0">
                     <User className="w-7 h-7 text-status-delivering" />
                   </div>
-                  <div className="flex-1">
-                    <p className="text-xl font-semibold">{entregador.nome}</p>
+                  <div className="flex-1 min-w-0 text-center sm:text-left">
+                    <p className="text-lg sm:text-xl font-semibold truncate">{entregador.nome}</p>
                     {entregador.tipo_bag && (
-                       <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                         <Package className="w-4 h-4" />
-                         <span>{
-                           franquiaBagTipos.find((b) => b.id === entregador.tipo_bag)?.nome || entregador.tipo_bag
-                         }</span>
-                       </div>
-                     )}
+                      <div className="flex items-center justify-center sm:justify-start gap-2 mt-1 text-sm text-muted-foreground">
+                        <Package className="w-4 h-4" />
+                        <span className="truncate">
+                          {franquiaBagTipos.find((b) => b.id === entregador.tipo_bag)?.nome || entregador.tipo_bag}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <Button
                     onClick={() => handleReturn(entregador)}
                     disabled={updateMutation.isPending}
                     variant="outline"
                     size="lg"
-                    className="gap-2 text-lg px-6"
+                    className="w-full sm:w-auto gap-2 text-base sm:text-lg px-4 sm:px-6"
                   >
                     <RotateCcw className="w-5 h-5" />
                     Voltar para Fila
