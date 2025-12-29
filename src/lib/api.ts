@@ -767,7 +767,6 @@ export async function fetchSenhasPagamento(unidadeId: string): Promise<SenhaPaga
     .from('senhas_pagamento')
     .select('*')
     .eq('unidade_id', unidadeId)
-    .in('status', ['aguardando', 'chamado'])
     .gt('expira_em', new Date().toISOString())
     .order('created_at', { ascending: true });
   

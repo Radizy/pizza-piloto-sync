@@ -80,10 +80,10 @@ export default function FilaPagamento() {
     },
   });
 
-  const senhasPendentes = senhas.filter((s) => s.status !== 'atendido');
+  const senhasPendentes = senhas.filter((s) => s.status === 'aguardando' || s.status === 'chamado');
   const senhasPagas = senhas.filter((s) => s.status === 'atendido');
 
-  // Motoboys que ainda não possuem senha pendente/ativa
+  // Motoboys que ainda não possuem senha pendente/ativa hoje
   const motoboysFilaPagamento = motoboysAptos.filter((motoboy) => {
     return !senhasPendentes.some(
       (senha) => senha.entregador_id && senha.entregador_id === motoboy.id,
