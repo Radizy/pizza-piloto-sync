@@ -77,15 +77,6 @@ export function Layout({ children, showHeader = true }: LayoutProps) {
               <span className="font-mono font-bold text-lg">DeliveryOS</span>
             </Link>
  
-            {selectedUnit && !isAdminRoute && location.pathname === '/roteirista' && canChangeUnit && (
-               <>
-                 <span className="text-border">|</span>
-                 <UnitSelector
-                   value={selectedUnit}
-                   onChange={handleChangeUnit}
-                 />
-               </>
-             )}
           </div>
  
           {selectedUnit && !isAdminRoute && (

@@ -528,45 +528,47 @@ export default function TV() {
       <audio ref={audioRef} src={CALL_AUDIO_URL} preload="auto" />
 
       {/* Animação Premium de Chamada (entrega ou pagamento) */}
-      <TVCallAnimation
-        show={!!displayingCalled || !!displayingPagamento}
-        tipo={displayingPagamento ? 'PAGAMENTO' : 'ENTREGA'}
-        nomeMotoboy={
-          displayingPagamento?.entregador_nome ||
-          displayingCalled?.entregador.nome ||
-          ''
-        }
-        bagNome={
-          displayingPagamento
-            ? undefined
-            : (() => {
-                const bagId = displayingCalled?.entregador.tipo_bag;
-                if (!bagId) return undefined;
-                return (
-                  franquiaBagTipos.find((b) => b.id === bagId)?.nome || bagId
-                );
-              })()
-        }
-        callPhrase={
-          !displayingPagamento && displayingCalled
-            ? buildTvTexts(displayingCalled.entregador.nome, (() => {
-                const bagId = displayingCalled.entregador.tipo_bag;
-                if (!bagId) return undefined;
-                return franquiaBagTipos.find((b) => b.id === bagId)?.nome || bagId;
-              })()).chamadaText
-            : undefined
-        }
-        bagPhrase={
-          !displayingPagamento && displayingCalled
-            ? buildTvTexts(displayingCalled.entregador.nome, (() => {
-                const bagId = displayingCalled.entregador.tipo_bag;
-                if (!bagId) return undefined;
-                return franquiaBagTipos.find((b) => b.id === bagId)?.nome || bagId;
-              })()).bagText
-            : undefined
-        }
-        onComplete={displayingPagamento ? handlePagamentoAnimationComplete : handleAnimationComplete}
-      />
+       <TVCallAnimation
+         show={!!displayingCalled || !!displayingPagamento}
+         tipo={displayingPagamento ? 'PAGAMENTO' : 'ENTREGA'}
+         nomeMotoboy={
+           displayingPagamento?.entregador_nome ||
+           displayingCalled?.entregador.nome ||
+           ''
+         }
+         bagNome={
+           displayingPagamento
+             ? undefined
+             : (() => {
+                 const bagId = displayingCalled?.entregador.tipo_bag;
+                 if (!bagId) return undefined;
+                 return (
+                   franquiaBagTipos.find((b) => b.id === bagId)?.nome || bagId
+                 );
+               })()
+         }
+         callPhrase={
+           displayingPagamento && displayingPagamento.entregador_nome
+             ? buildTvTexts(displayingPagamento.entregador_nome, undefined).chamadaText
+             : (!displayingPagamento && displayingCalled
+                 ? buildTvTexts(displayingCalled.entregador.nome, (() => {
+                     const bagId = displayingCalled.entregador.tipo_bag;
+                     if (!bagId) return undefined;
+                     return franquiaBagTipos.find((b) => b.id === bagId)?.nome || bagId;
+                   })()).chamadaText
+                 : undefined)
+         }
+         bagPhrase={
+           !displayingPagamento && displayingCalled
+             ? buildTvTexts(displayingCalled.entregador.nome, (() => {
+                 const bagId = displayingCalled.entregador.tipo_bag;
+                 if (!bagId) return undefined;
+                 return franquiaBagTipos.find((b) => b.id === bagId)?.nome || bagId;
+               })()).bagText
+             : undefined
+         }
+         onComplete={displayingPagamento ? handlePagamentoAnimationComplete : handleAnimationComplete}
+       />
 
       {/* Header - Logo sem link + faixa Top 5 */}
       <header className="flex items-center justify-between px-8 py-4 border-b border-border bg-card/50 overflow-hidden relative">

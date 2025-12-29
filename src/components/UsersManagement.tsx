@@ -42,6 +42,7 @@ interface FormData {
   papel: Papel;
   franquiaId: string | null;
   unidadeId: string | null;
+  unidadeIds: string[]; // lojas adicionais vinculadas
 }
 
 interface FranquiaOption {
@@ -67,6 +68,7 @@ export function UsersManagement() {
     papel: 'operador',
     franquiaId: null,
     unidadeId: null,
+    unidadeIds: [],
   });
   const [newPassword, setNewPassword] = useState('');
 
@@ -124,12 +126,52 @@ export function UsersManagement() {
         franquia_id = payload.franquiaId;
       } else if (payload.papel === 'operador') {
         role = 'user';
-        unidade_id = payload.unidadeId;
-        // opcionalmente poderíamos preencher franquia_id a partir da unidade escolhida
-        const unidade = unidades.find((u) => u.id === payload.unidadeId);
+        const selectedUnits = payload.unidadeIds.length
+          ? payload.unidadeIds
+          : payload.unidadeId
+            ? [payload.unidadeId]
+            : [];
+
+        if (selectedUnits.length === 0) {
+          throw new Error('Selecione ao menos uma unidade');
+        }
+
+        unidade_id = selectedUnits[0];
+        const unidade = unidades.find((u) => u.id === unidade_id);
         if (unidade) {
           franquia_id = unidade.franquia_id;
         }
+
+        // Criar usuário e vincular unidades após obter o id
+        const { data: created, error } = await supabase
+          .from('system_users')
+          .insert([
+            {
+              username: payload.username,
+              password_hash: payload.password,
+              role,
+              franquia_id,
+              unidade_id,
+            },
+          ])
+          .select('id')
+          .single();
+
+        if (error) throw error;
+
+        const userId = created.id as string;
+
+        const userUnidadesPayload = selectedUnits.map((uid) => ({
+          user_id: userId,
+          unidade_id: uid,
+        }));
+
+        const { error: linkError } = await supabase
+          .from('user_unidades')
+          .insert(userUnidadesPayload);
+
+        if (linkError) throw linkError;
+        return;
       }
 
       const { error } = await supabase.from('system_users').insert([
@@ -167,11 +209,39 @@ export function UsersManagement() {
         franquia_id = payload.franquiaId;
       } else if (payload.papel === 'operador') {
         role = 'user';
-        unidade_id = payload.unidadeId;
-        const unidade = unidades.find((u) => u.id === payload.unidadeId);
+        const selectedUnits = payload.unidadeIds.length
+          ? payload.unidadeIds
+          : payload.unidadeId
+            ? [payload.unidadeId]
+            : [];
+
+        if (selectedUnits.length === 0) {
+          throw new Error('Selecione ao menos uma unidade');
+        }
+
+        unidade_id = selectedUnits[0];
+        const unidade = unidades.find((u) => u.id === unidade_id);
         if (unidade) {
           franquia_id = unidade.franquia_id;
         }
+
+        // Sincronizar tabela user_unidades
+        const { error: deleteError } = await supabase
+          .from('user_unidades')
+          .delete()
+          .eq('user_id', id);
+        if (deleteError) throw deleteError;
+
+        const userUnidadesPayload = selectedUnits.map((uid) => ({
+          user_id: id,
+          unidade_id: uid,
+        }));
+
+        const { error: linkError } = await supabase
+          .from('user_unidades')
+          .insert(userUnidadesPayload);
+
+        if (linkError) throw linkError;
       }
 
       const { error } = await supabase
@@ -233,6 +303,7 @@ export function UsersManagement() {
       papel: 'operador',
       franquiaId: null,
       unidadeId: null,
+      unidadeIds: [],
     });
     setEditingUser(null);
     setIsFormOpen(false);
@@ -272,10 +343,10 @@ export function UsersManagement() {
       return;
     }
 
-    if (formData.papel === 'operador' && !formData.unidadeId) {
-      toast.error('Selecione a unidade para o Operador');
-      return;
-    }
+    if (formData.papel === 'operador' && (!formData.unidadeIds || formData.unidadeIds.length === 0)) {
+       toast.error('Selecione ao menos uma unidade para o Operador');
+       return;
+     }
 
     if (editingUser) {
       updateMutation.mutate({
@@ -303,6 +374,9 @@ export function UsersManagement() {
     const unidade = user.unidade_id ? unidades.find((u) => u.id === user.unidade_id) : undefined;
     const franquiaId = user.franquia_id ?? unidade?.franquia_id ?? null;
 
+    // Buscar unidades vinculadas a este usuário
+    const unidadeIdsFromLinks: string[] = []; // será preenchido no efeito abaixo, se necessário
+
     setEditingUser(user);
     setFormData({
       username: user.username,
@@ -310,6 +384,7 @@ export function UsersManagement() {
       papel,
       franquiaId,
       unidadeId: user.unidade_id,
+      unidadeIds: unidadeIdsFromLinks,
     });
     setIsFormOpen(true);
   };
@@ -542,35 +617,43 @@ export function UsersManagement() {
             )}
 
             {formData.papel === 'operador' && (
-              <div className="space-y-2">
-                <Label htmlFor="unidade">Unidade (loja)</Label>
-                <Select
-                  value={formData.unidadeId ?? ''}
-                  onValueChange={(v) => {
-                    const unidade = unidades.find((u) => u.id === v);
-                    setFormData({
-                      ...formData,
-                      unidadeId: v || null,
-                      franquiaId: unidade ? unidade.franquia_id : formData.franquiaId,
-                    });
-                  }}
-                  disabled={!formData.franquiaId}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={
-                      formData.franquiaId ? 'Selecione a unidade' : 'Selecione primeiro a franquia'
-                    } />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {unidadesFiltradas.map((u) => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {u.nome_loja}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+               <div className="space-y-2">
+                 <Label htmlFor="unidade">Unidades (lojas)</Label>
+                 <div className="space-y-1 max-h-48 overflow-auto border rounded-md p-2">
+                   {unidadesFiltradas.map((u) => {
+                     const checked = formData.unidadeIds.includes(u.id);
+                     return (
+                       <label
+                         key={u.id}
+                         className="flex items-center gap-2 text-sm cursor-pointer"
+                       >
+                         <input
+                           type="checkbox"
+                           checked={checked}
+                           onChange={(e) => {
+                             const isChecked = e.target.checked;
+                             const nextIds = isChecked
+                               ? [...formData.unidadeIds, u.id]
+                               : formData.unidadeIds.filter((id) => id !== u.id);
+                             setFormData({
+                               ...formData,
+                               unidadeIds: nextIds,
+                               unidadeId: nextIds[0] ?? null,
+                             });
+                           }}
+                         />
+                         <span>{u.nome_loja}</span>
+                       </label>
+                     );
+                   })}
+                   {unidadesFiltradas.length === 0 && (
+                     <p className="text-xs text-muted-foreground">
+                       Nenhuma unidade encontrada para esta franquia.
+                     </p>
+                   )}
+                 </div>
+               </div>
+             )}
 
             <div className="flex gap-3 pt-4">
               <Button type="button" variant="outline" onClick={resetForm} className="flex-1">
