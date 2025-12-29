@@ -204,13 +204,11 @@ export default function FilaPagamento() {
                         motoboy.nome,
                       );
 
-                      await chamarSenhaPagamento(senha.id);
-
                       await queryClient.invalidateQueries({
                         queryKey: ['senhas-pagamento'],
                       });
 
-                      toast.success('Motoboy chamado para pagamento');
+                      toast.success('Senha gerada para pagamento');
                     } catch (error) {
                       console.error('Erro ao chamar motoboy para pagamento:', error);
                       toast.error('Erro ao chamar motoboy para pagamento');

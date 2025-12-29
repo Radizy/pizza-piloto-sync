@@ -646,7 +646,12 @@ export interface SenhaPagamento {
   updated_at: string;
 }
 
-export async function gerarSenhaPagamento(unidadeId: string, franquiaId: string, entregadorId?: string, entregadorNome?: string): Promise<SenhaPagamento> {
+export async function gerarSenhaPagamento(
+  unidadeId: string,
+  franquiaId: string,
+  entregadorId?: string,
+  entregadorNome?: string,
+): Promise<SenhaPagamento> {
   // Buscar última senha do dia para gerar número sequencial
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
@@ -684,7 +689,77 @@ export async function gerarSenhaPagamento(unidadeId: string, franquiaId: string,
     .single();
   
   if (error) throw error;
-  return data as SenhaPagamento;
+
+  const senha = data as SenhaPagamento;
+
+  // Após gerar a senha, enviar mensagem inicial para o motoboy ficar atento ao celular
+  try {
+    // Buscar unidade para obter nome_loja
+    const { data: unidade, error: unidadeError } = await supabase
+      .from('unidades')
+      .select('id, nome_loja')
+      .eq('id', unidadeId)
+      .maybeSingle();
+
+    if (unidadeError) {
+      console.error('Erro ao buscar unidade ao gerar senha de pagamento:', unidadeError);
+    }
+
+    // Buscar telefone e nome do entregador, se existir vínculo
+    let telefone: string | null = null;
+    let nomeMotoboy: string | null = senha.entregador_nome;
+
+    if (senha.entregador_id) {
+      const { data: entregador, error: entregadorError } = await supabase
+        .from('entregadores')
+        .select('telefone, nome')
+        .eq('id', senha.entregador_id)
+        .maybeSingle();
+
+      if (entregadorError) {
+        console.error('Erro ao buscar entregador ao gerar senha de pagamento:', entregadorError);
+      } else if (entregador) {
+        telefone = entregador.telefone as string;
+        nomeMotoboy = (entregador.nome as string) || nomeMotoboy;
+      }
+    }
+
+    // Buscar template de mensagem "aguardando pagamento" na configuração da franquia
+    let mensagem = '';
+
+    if (franquiaId) {
+      const { data: franquia, error: franquiaError } = await supabase
+        .from('franquias')
+        .select('config_pagamento')
+        .eq('id', franquiaId)
+        .maybeSingle();
+
+      if (franquiaError) {
+        console.error('Erro ao buscar config_pagamento da franquia ao gerar senha:', franquiaError);
+      } else if (franquia?.config_pagamento) {
+        const tvPrompts = (franquia.config_pagamento as any).tv_prompts || {};
+        const template: string =
+          tvPrompts.pagamento_aguardando ||
+          'Olá {nome}, sua senha é {senha}. Fique atento ao seu celular, em breve chamaremos para pagamento.';
+
+        mensagem = template
+          .replace('{nome}', nomeMotoboy || '')
+          .replace('{senha}', senha.numero_senha)
+          .replace('{unidade}', (unidade?.nome_loja as string) || '');
+      }
+    }
+
+    if (telefone && mensagem) {
+      await sendWhatsAppMessage(telefone, mensagem, {
+        franquiaId,
+        unidadeId: senha.unidade_id,
+      });
+    }
+  } catch (whatsError) {
+    console.error('Erro ao enviar WhatsApp ao gerar senha de pagamento:', whatsError);
+  }
+
+  return senha;
 }
 
 export async function fetchSenhasPagamento(unidadeId: string): Promise<SenhaPagamento[]> {
@@ -760,7 +835,7 @@ export async function chamarSenhaPagamento(senhaId: string) {
       const tvPrompts = (franquia.config_pagamento as any).tv_prompts || {};
       const template: string =
         tvPrompts.pagamento_chamada ||
-        'Olá {nome}, sua senha é {senha}. Dirija-se ao caixa da {unidade} para receber.';
+        'Olá {nome}, é a sua vez de receber. Vá até o escritório (caixa) da {unidade} para receber.';
 
       mensagem = template
         .replace('{nome}', nomeMotoboy || '')
