@@ -15,7 +15,7 @@ import {
   Unidade,
 } from '@/lib/api';
 import { toast } from 'sonner';
-import { Ticket, Phone, Check, Loader2 } from 'lucide-react';
+import { Ticket, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -89,21 +89,6 @@ export default function FilaPagamento() {
     });
   };
 
-  // Mutation para chamar senha (atualiza status + WhatsApp + dispara animação TV)
-  const chamarMutation = useMutation({
-    mutationFn: async (senha: SenhaPagamento) => {
-      await chamarSenhaPagamento(senha.id);
-      await sendPagamentoWhatsapp(senha);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['senhas-pagamento'] });
-      toast.success('Senha chamada e TV notificada!');
-    },
-    onError: () => {
-      toast.error('Erro ao chamar senha');
-    },
-  });
-
   // Mutation para atender senha (marcar como pago)
   const atenderMutation = useMutation({
     mutationFn: (senhaId: string) => atenderSenhaPagamento(senhaId),
@@ -116,7 +101,7 @@ export default function FilaPagamento() {
     },
   });
 
-  const senhasChamadas = senhas.filter((s) => s.status === 'chamado');
+  const senhasPendentes = senhas.filter((s) => s.status !== 'atendido');
   const senhasPagas = senhas.filter((s) => s.status === 'atendido');
 
   if (!selectedUnit) {
@@ -158,9 +143,9 @@ export default function FilaPagamento() {
         <div className="bg-card border border-border rounded-lg p-4">
           <div className="flex items-center gap-2 mb-1">
             <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-sm text-muted-foreground">Senhas chamadas</span>
+            <span className="text-sm text-muted-foreground">Senhas pendentes</span>
           </div>
-          <p className="text-3xl font-bold font-mono">{senhasChamadas.length}</p>
+          <p className="text-3xl font-bold font-mono">{senhasPendentes.length}</p>
         </div>
       </div>
 
@@ -237,26 +222,26 @@ export default function FilaPagamento() {
         </div>
       ) : (
         <div className="space-y-8">
-          {/* Senhas Chamadas */}
+          {/* Senhas Pendentes */}
           <div>
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Phone className="w-5 h-5 text-green-500" />
-              Chamadas ({senhasChamadas.length})
+              <Ticket className="w-5 h-5 text-amber-500" />
+              Pendentes ({senhasPendentes.length})
             </h2>
-            {senhasChamadas.length === 0 ? (
+            {senhasPendentes.length === 0 ? (
               <div className="text-center py-12 bg-card border border-dashed border-border rounded-lg">
-                <Phone className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-muted-foreground">Nenhuma senha chamada</p>
+                <Ticket className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-muted-foreground">Nenhuma senha pendente</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {senhasChamadas.map((senha) => (
+                {senhasPendentes.map((senha) => (
                   <div
                     key={senha.id}
-                    className="bg-card border-2 border-green-500 rounded-lg p-6 animate-pulse"
+                    className="bg-card border-2 border-amber-500 rounded-lg p-6"
                   >
                     <div className="text-center mb-4">
-                      <p className="text-5xl font-bold font-mono text-green-500">
+                      <p className="text-5xl font-bold font-mono text-amber-500">
                         {senha.numero_senha}
                       </p>
                       {senha.entregador_nome && (

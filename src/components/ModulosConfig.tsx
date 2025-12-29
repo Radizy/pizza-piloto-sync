@@ -1,12 +1,14 @@
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useUnit } from '@/contexts/UnitContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Package, Sparkles } from 'lucide-react';
+import { Loader2, Package, Sparkles, Webhook, Copy, Check, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
@@ -19,6 +21,7 @@ interface Modulo {
 
 export function ModulosConfig() {
   const { user } = useAuth();
+  const { selectedUnit } = useUnit();
   const queryClient = useQueryClient();
 
   // Buscar módulos globais
@@ -56,6 +59,8 @@ export function ModulosConfig() {
     entrega_chamada: 'É a sua vez {nome}',
     entrega_bag: 'Pegue a {bag}',
   };
+
+  const whatsappConfig = (franquia?.config_pagamento as any)?.whatsapp || null;
 
   const savePromptsMutation = useMutation({
     mutationFn: async (payload: { entrega_chamada: string; entrega_bag: string }) => {
@@ -134,42 +139,205 @@ export function ModulosConfig() {
         </div>
 
         {user?.role === 'admin_franquia' && (
-          <div className="mt-6 border-t border-border pt-6 space-y-4">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <span className="text-sm font-semibold">Textos da animação da TV (por franquia)</span>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Use <code>{'{nome}'}</code> para o nome do motoboy e <code>{'{bag}'}</code> para o nome da bag.
-            </p>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="tv-entrega-chamada">Frase de chamada</Label>
-                <Input
-                  id="tv-entrega-chamada"
-                  defaultValue={tvPrompts.entrega_chamada}
-                  onBlur={(e) =>
-                    savePromptsMutation.mutate({
-                      entrega_chamada: e.target.value || tvPrompts.entrega_chamada,
-                      entrega_bag: tvPrompts.entrega_bag,
-                    })
-                  }
-                />
+          <div className="mt-6 border-t border-border pt-6 space-y-6">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary" />
+                <span className="text-sm font-semibold">Textos da animação da TV (por franquia)</span>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="tv-entrega-bag">Frase da bag</Label>
-                <Input
-                  id="tv-entrega-bag"
-                  defaultValue={tvPrompts.entrega_bag}
-                  onBlur={(e) =>
-                    savePromptsMutation.mutate({
-                      entrega_chamada: tvPrompts.entrega_chamada,
-                      entrega_bag: e.target.value || tvPrompts.entrega_bag,
-                    })
-                  }
-                />
+              <p className="text-xs text-muted-foreground">
+                Use <code>{'{nome}'}</code> para o nome do motoboy e <code>{'{bag}'}</code> para o nome da bag.
+              </p>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="tv-entrega-chamada">Frase de chamada</Label>
+                  <Input
+                    id="tv-entrega-chamada"
+                    defaultValue={tvPrompts.entrega_chamada}
+                    onBlur={(e) =>
+                      savePromptsMutation.mutate({
+                        entrega_chamada: e.target.value || tvPrompts.entrega_chamada,
+                        entrega_bag: tvPrompts.entrega_bag,
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="tv-entrega-bag">Frase da bag</Label>
+                  <Input
+                    id="tv-entrega-bag"
+                    defaultValue={tvPrompts.entrega_bag}
+                    onBlur={(e) =>
+                      savePromptsMutation.mutate({
+                        entrega_chamada: tvPrompts.entrega_chamada,
+                        entrega_bag: e.target.value || tvPrompts.entrega_bag,
+                      })
+                    }
+                  />
+                </div>
               </div>
             </div>
+
+            {/* Integração Planilha (Google Sheets) */}
+            {modulosAtivos.includes('integracao_planilha') && selectedUnit && (
+              <div className="border-t border-border pt-6 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Webhook className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-semibold">Integração com Planilha (Google Sheets)</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Cole a URL do seu Google Apps Script e use o código abaixo como base.
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="webhook-url">URL do Webhook (Apps Script)</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="webhook-url"
+                      value={webhookUrl}
+                      onChange={(e) => setWebhookUrl(e.target.value)}
+                      placeholder="https://script.google.com/macros/s/..."
+                    />
+                    <Button
+                      type="button"
+                      onClick={async () => {
+                        // salvar na tabela system_config da unidade atual
+                        const { data, error } = await supabase
+                          .from('system_config')
+                          .select('id')
+                          .eq('unidade', selectedUnit)
+                          .maybeSingle();
+
+                        if (error && error.code !== 'PGRST116') {
+                          toast.error('Erro ao salvar webhook');
+                          return;
+                        }
+
+                        const upsertError = data
+                          ? (await supabase
+                              .from('system_config')
+                              .update({ webhook_url: webhookUrl })
+                              .eq('id', data.id)).error
+                          : (await supabase
+                              .from('system_config')
+                              .insert({ unidade: selectedUnit, webhook_url: webhookUrl } as any)).error;
+
+                        if (upsertError) {
+                          toast.error('Erro ao salvar webhook');
+                        } else {
+                          toast.success('Webhook salvo com sucesso!');
+                          queryClient.invalidateQueries({ queryKey: ['system-config', selectedUnit] });
+                        }
+                      }}
+                    >
+                      Salvar
+                    </Button>
+                  </div>
+                </div>
+                <div className="border border-dashed border-border rounded-lg p-4 space-y-3 bg-muted/10">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <FileCode className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-semibold">Código base do Apps Script</span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        navigator.clipboard.writeText(APPS_SCRIPT_CODE);
+                        setCopied(true);
+                        toast.success('Código copiado!');
+                        setTimeout(() => setCopied(false), 2000);
+                      }}
+                      className="gap-2"
+                    >
+                      {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      Copiar código
+                    </Button>
+                  </div>
+                  <Textarea
+                    readOnly
+                    value={APPS_SCRIPT_CODE}
+                    className="font-mono text-xs h-40 resize-none"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Configuração de WhatsApp (Evolution) */}
+            {modulosAtivos.includes('whatsapp_evolution') && (
+              <div className="border-t border-border pt-6 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-semibold">WhatsApp (Evolution) da franquia</span>
+                </div>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="whats-url">URL da API</Label>
+                    <Input
+                      id="whats-url"
+                      value={whatsUrl}
+                      onChange={(e) => setWhatsUrl(e.target.value)}
+                      placeholder="https://api.seuwhats.com/instance/..."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="whats-instance">Instância</Label>
+                    <Input
+                      id="whats-instance"
+                      value={whatsInstance}
+                      onChange={(e) => setWhatsInstance(e.target.value)}
+                      placeholder="ID da instância"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="whats-api-key">API Key</Label>
+                    <Input
+                      id="whats-api-key"
+                      type="password"
+                      value={whatsApiKey}
+                      onChange={(e) => setWhatsApiKey(e.target.value)}
+                      placeholder="Chave da API"
+                    />
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  onClick={async () => {
+                    if (!user?.franquiaId) return;
+                    const { data, error } = await supabase
+                      .from('franquias')
+                      .select('config_pagamento')
+                      .eq('id', user.franquiaId)
+                      .maybeSingle();
+                    if (error) {
+                      toast.error('Erro ao carregar configuração');
+                      return;
+                    }
+                    const currentCfg = (data?.config_pagamento as any) || {};
+                    const newCfg = {
+                      ...currentCfg,
+                      whatsapp:
+                        whatsUrl && whatsApiKey && whatsInstance
+                          ? { url: whatsUrl, api_key: whatsApiKey, instance: whatsInstance }
+                          : null,
+                    };
+                    const { error: updateError } = await supabase
+                      .from('franquias')
+                      .update({ config_pagamento: newCfg })
+                      .eq('id', user.franquiaId);
+                    if (updateError) {
+                      toast.error('Erro ao salvar configuração de WhatsApp');
+                    } else {
+                      toast.success('Configuração de WhatsApp salva com sucesso!');
+                      queryClient.invalidateQueries({ queryKey: ['franquia-modulos', user.franquiaId] });
+                    }
+                  }}
+                >
+                  Salvar WhatsApp
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </CardContent>

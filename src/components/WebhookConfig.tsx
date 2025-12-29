@@ -8,66 +8,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Loader2, Webhook, Copy, Check, FileCode, Store } from 'lucide-react';
-
-const APPS_SCRIPT_CODE = `function doPost(e) {
-  try {
-    var data = JSON.parse(e.postData.contents);
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    
-    // Nome da aba: Unidade-DD/MM
-    var hoje = new Date();
-    var dataFormatada = Utilities.formatDate(hoje, "America/Sao_Paulo", "dd/MM");
-    var nomeAba = data.unidade + "-" + dataFormatada;
-    
-    // Verificar se a aba existe, senão criar
-    var sheet = ss.getSheetByName(nomeAba);
-    if (!sheet) {
-      sheet = ss.insertSheet(nomeAba);
-      // Adicionar cabeçalhos
-      sheet.appendRow([
-        "Horário Saída",
-        "Motoboy",
-        "Qtd. Entregas",
-        "Tipo BAG",
-        "Possui Bebida",
-        "Registrado em"
-      ]);
-      // Formatar cabeçalhos
-      sheet.getRange(1, 1, 1, 6).setFontWeight("bold");
-    }
-    
-    // Adicionar nova linha
-    sheet.appendRow([
-      data.horario_saida,
-      data.motoboy,
-      data.quantidade_entregas,
-      data.bag,
-      data.possui_bebida || "NAO",
-      new Date()
-    ]);
-    
-    return ContentService
-      .createTextOutput(JSON.stringify({ success: true }))
-      .setMimeType(ContentService.MimeType.JSON);
-      
-  } catch (error) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ success: false, error: error.message }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}`;
+import { Loader2, Store } from 'lucide-react';
 
 export function WebhookConfig() {
   const { selectedUnit } = useUnit();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [webhookUrl, setWebhookUrl] = useState('');
   const [nomeLoja, setNomeLoja] = useState('');
-  const [copied, setCopied] = useState(false);
-  const [whatsUrl, setWhatsUrl] = useState('');
-  const [whatsApiKey, setWhatsApiKey] = useState('');
-  const [whatsInstance, setWhatsInstance] = useState('');
 
   // Config da unidade (Google Sheets)
   const { data: config, isLoading } = useQuery({
@@ -85,28 +32,7 @@ export function WebhookConfig() {
     enabled: !!selectedUnit,
   });
 
-  // Config de WhatsApp da franquia
-  const { data: franquiaConfig } = useQuery({
-    queryKey: ['franquia-whatsapp-config', user?.franquiaId],
-    queryFn: async () => {
-      if (!user?.franquiaId) return null;
-      const { data, error } = await supabase
-        .from('franquias')
-        .select('id, config_pagamento')
-        .eq('id', user.franquiaId)
-        .maybeSingle();
-      if (error) throw error;
-      return data as any;
-    },
-    enabled: !!user?.franquiaId,
-  });
-
   useEffect(() => {
-    if (config?.webhook_url) {
-      setWebhookUrl(config.webhook_url);
-    } else {
-      setWebhookUrl('');
-    }
     if ((config as any)?.nome_loja) {
       setNomeLoja((config as any).nome_loja);
     } else {
@@ -114,75 +40,30 @@ export function WebhookConfig() {
     }
   }, [config]);
 
-  useEffect(() => {
-    const cfg = (franquiaConfig?.config_pagamento as any) || {};
-    const whatsapp = cfg.whatsapp || null;
-    setWhatsUrl(whatsapp?.url || '');
-    setWhatsApiKey(whatsapp?.api_key || '');
-    setWhatsInstance(whatsapp?.instance || '');
-  }, [franquiaConfig]);
-
-  // Save config unidade
+  // Save config unidade (apenas nome da loja)
   const saveMutation = useMutation({
-    mutationFn: async ({ url, loja }: { url: string; loja: string }) => {
+    mutationFn: async ({ loja }: { loja: string }) => {
       if (config) {
         const { error } = await supabase
           .from('system_config')
-          .update({ webhook_url: url, nome_loja: loja } as any)
+          .update({ nome_loja: loja } as any)
           .eq('id', config.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('system_config')
-          .insert({ unidade: selectedUnit, webhook_url: url, nome_loja: loja } as any);
+          .insert({ unidade: selectedUnit, nome_loja: loja } as any);
         if (error) throw error;
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['system-config'] });
-      toast.success('Configuração salva com sucesso!');
+      toast.success('Nome da loja salvo com sucesso!');
     },
     onError: () => {
-      toast.error('Erro ao salvar configuração');
+      toast.error('Erro ao salvar nome da loja');
     },
   });
-
-  const saveWhatsappMutation = useMutation({
-    mutationFn: async ({ url, apiKey, instance }: { url: string; apiKey: string; instance: string }) => {
-      if (!user?.franquiaId) return;
-      const { data, error } = await supabase
-        .from('franquias')
-        .select('config_pagamento')
-        .eq('id', user.franquiaId)
-        .maybeSingle();
-      if (error) throw error;
-      const currentCfg = (data?.config_pagamento as any) || {};
-      const newCfg = {
-        ...currentCfg,
-        whatsapp: url && apiKey && instance ? { url, api_key: apiKey, instance } : null,
-      };
-      const { error: updateError } = await supabase
-        .from('franquias')
-        .update({ config_pagamento: newCfg })
-        .eq('id', user.franquiaId);
-      if (updateError) throw updateError;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['franquia-whatsapp-config'] });
-      toast.success('Configuração de WhatsApp salva com sucesso!');
-    },
-    onError: () => {
-      toast.error('Erro ao salvar configuração de WhatsApp');
-    },
-  });
-
-  const handleSave = () => {
-    saveMutation.mutate({ url: webhookUrl, loja: nomeLoja });
-  };
-
-  const handleSaveWhatsapp = () => {
-    saveWhatsappMutation.mutate({ url: whatsUrl, apiKey: whatsApiKey, instance: whatsInstance });
-  };
 
   const handleCopyScript = () => {
     navigator.clipboard.writeText(APPS_SCRIPT_CODE);
