@@ -32,12 +32,21 @@ export default function FilaPagamento() {
     refetchInterval: 10000,
   });
 
-  const motoboysAptos = entregadores.filter(
-    (e) =>
-      e.ativo &&
-      e.status === 'disponivel' &&
-      shouldShowInQueue(e),
-  );
+  const motoboysAptos = entregadores.filter((e) => {
+    const ativo = e.ativo;
+    const disponivel = e.status === 'disponivel';
+
+    // mesma regra de visibilidade da TV: horário/dia ou check-in recente
+    const hasRecentCheckin = (() => {
+      if (!e.fila_posicao) return false;
+      const now = new Date().getTime();
+      const filaTime = new Date(e.fila_posicao).getTime();
+      const diffHours = (now - filaTime) / (1000 * 60 * 60);
+      return diffHours <= 24;
+    })();
+
+    return ativo && disponivel && (shouldShowInQueue(e) || hasRecentCheckin);
+  });
 
   // Buscar senhas ativas
   const { data: senhas = [], isLoading } = useQuery({

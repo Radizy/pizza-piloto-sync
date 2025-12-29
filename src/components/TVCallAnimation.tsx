@@ -5,10 +5,11 @@ interface TVCallAnimationProps {
   show: boolean;
   tipo: 'ENTREGA' | 'PAGAMENTO';
   nomeMotoboy: string;
+  bagNome?: string;
   onComplete: () => void;
 }
 
-export const TVCallAnimation = ({ show, tipo, nomeMotoboy, onComplete }: TVCallAnimationProps) => {
+export const TVCallAnimation = ({ show, tipo, nomeMotoboy, bagNome, onComplete }: TVCallAnimationProps) => {
   const [stage, setStage] = useState<'moto' | 'tela'>('moto');
 
   useEffect(() => {
@@ -99,11 +100,11 @@ export const TVCallAnimation = ({ show, tipo, nomeMotoboy, onComplete }: TVCallA
             <p className="text-3xl md:text-4xl text-white/80 font-semibold">
               {tipo === 'PAGAMENTO'
                 ? `Agora é sua vez, ${nomeMotoboy}!`
-                : 'É a sua vez de pegar a próxima entrega!'}
+                : `É a sua vez "${nomeMotoboy}"`}
             </p>
-            {tipo === 'PAGAMENTO' && (
-              <p className="text-2xl md:text-3xl text-white/70 font-semibold">
-                Pegue sua bag chamada no caixa principal.
+            {tipo === 'ENTREGA' && bagNome && (
+              <p className="text-2xl md:text-3xl text-white/80 font-semibold">
+                Pegue a "{bagNome}"
               </p>
             )}
             <p className="text-[6vw] md:text-[4.5vw] font-black text-white tracking-wide break-words">

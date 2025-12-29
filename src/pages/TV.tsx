@@ -284,7 +284,30 @@ export default function TV() {
     enabled: !!user?.franquiaId,
   });
 
-  // Play audio and TTS when someone is called
+  // Configurações de prompts da TV (por franquia)
+  const { data: franquiaConfig } = useQuery<{ config_pagamento: any | null }>({
+    queryKey: ['franquia-config-tv', user?.franquiaId],
+    queryFn: async () => {
+      if (!user?.franquiaId) return { config_pagamento: null };
+      const { data, error } = await supabase
+        .from('franquias')
+        .select('config_pagamento')
+        .eq('id', user.franquiaId)
+        .maybeSingle();
+      if (error) throw error;
+      return (data as any) || { config_pagamento: null };
+    },
+    enabled: !!user?.franquiaId,
+  });
+
+  const defaultTvPrompts = {
+    entrega_chamada: 'É a sua vez {nome}',
+    entrega_bag: 'Pegue a {bag}',
+  };
+
+  const tvPrompts = (franquiaConfig?.config_pagamento as any)?.tv_prompts || defaultTvPrompts;
+
+  // Play audio and TTS quando alguém é chamado
   const handleCallAnnouncement = useCallback(async (entregador: Entregador, hasBebida: boolean) => {
     if (isMuted) return;
 
@@ -300,19 +323,22 @@ export default function TV() {
       ? franquiaBagTipos.find((b) => b.id === bagId)?.nome || bagId
       : '';
 
-    // Wait a bit then speak
-    const bagText = bagName
-      ? `pegue a ${bagName}`
-      : 'pegue a sua bag';
+    // Construir texto a partir dos prompts configurados
+    const chamadaTemplate = tvPrompts.entrega_chamada || defaultTvPrompts.entrega_chamada;
+    const bagTemplate = tvPrompts.entrega_bag || defaultTvPrompts.entrega_bag;
 
-    let ttsText = `É a sua vez ${entregador.nome}! ${bagText}.`;
+    const chamadaText = chamadaTemplate.replace('{nome}', entregador.nome);
+    const bagText = bagTemplate.replace('{bag}', bagName || 'sua bag');
+
+    let ttsText = `${chamadaText}. ${bagText}.`;
     
     if (hasBebida) {
       ttsText += ' Atenção! O pedido possui refrigerante!';
     }
     
     await speak(ttsText);
-  }, [isMuted, speak, franquiaBagTipos]);
+  }, [isMuted, speak, franquiaBagTipos, tvPrompts]);
+
 
   // Listen for realtime calls with bebida info (entregas)
   useEffect(() => {
@@ -504,6 +530,17 @@ export default function TV() {
           displayingPagamento?.entregador_nome ||
           displayingCalled?.entregador.nome ||
           ''
+        }
+        bagNome={
+          displayingPagamento
+            ? undefined
+            : (() => {
+                const bagId = displayingCalled?.entregador.tipo_bag;
+                if (!bagId) return undefined;
+                return (
+                  franquiaBagTipos.find((b) => b.id === bagId)?.nome || bagId
+                );
+              })()
         }
         onComplete={displayingPagamento ? handlePagamentoAnimationComplete : handleAnimationComplete}
       />
