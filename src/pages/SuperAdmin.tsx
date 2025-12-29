@@ -1487,11 +1487,15 @@ export default function SuperAdmin() {
               </div>
 
               <div className="space-y-2">
-                <Label>Webhook de cobrança (URL)</Label>
+                <Label>Webhook de cobrança (URL do seu backend)</Label>
+                <p className="text-xs text-muted-foreground">
+                  Opcional. Use quando tiver uma URL do seu backend para receber notificações automáticas
+                  do gateway (pagamento confirmado, vencido, etc). Se não tiver, pode deixar em branco.
+                </p>
                 <Input
                   value={franquiaForm.webhook_url}
                   onChange={(e) => setFranquiaForm({ ...franquiaForm, webhook_url: e.target.value })}
-                  placeholder="URL para receber notificações de pagamento"
+                  placeholder="Opcional — ex.: https://seudominio.com/webhook-cobranca"
                 />
               </div>
 
