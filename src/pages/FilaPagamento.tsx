@@ -6,7 +6,6 @@ import { Layout, BackButton } from '@/components/Layout';
 import {
   gerarSenhaPagamento,
   fetchSenhasPagamento,
-  chamarSenhaPagamento,
   atenderSenhaPagamento,
   SenhaPagamento,
   fetchEntregadores,
@@ -55,39 +54,6 @@ export default function FilaPagamento() {
     enabled: !!user?.unidadeId,
     refetchInterval: 5000,
   });
-
-  // Enviar WhatsApp ao chamar pagamento usando template da unidade
-  const sendPagamentoWhatsapp = async (senha: SenhaPagamento) => {
-    if (!user?.unidadeId || !user?.franquiaId || !senha.entregador_id) return;
-
-    const { data: template } = await supabase
-      .from('whatsapp_templates')
-      .select('mensagem')
-      .eq('unidade_id', user.unidadeId)
-      .eq('codigo', 'chamada_pagamento')
-      .maybeSingle();
-
-    if (!template?.mensagem) return;
-
-    const { data: entregador } = await supabase
-      .from('entregadores')
-      .select('nome, telefone')
-      .eq('id', senha.entregador_id)
-      .maybeSingle();
-
-    if (!entregador?.telefone) return;
-
-    const nome = senha.entregador_nome || entregador.nome;
-    let mensagem = template.mensagem as string;
-    mensagem = mensagem.replace(/{{\s*nome\s*}}/gi, nome);
-    mensagem = mensagem.replace(/{{\s*senha\s*}}/gi, senha.numero_senha);
-
-    const { sendWhatsAppMessage } = await import('@/lib/api');
-    await sendWhatsAppMessage(entregador.telefone, mensagem, {
-      franquiaId: user.franquiaId,
-      unidadeId: user.unidadeId,
-    });
-  };
 
   // Mutation para atender senha (marcar como pago)
   const atenderMutation = useMutation({
@@ -175,15 +141,20 @@ export default function FilaPagamento() {
                 <Button
                   size="sm"
                   className="mt-2 gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
-                  disabled={chamarMutation.isPending}
                   onClick={async () => {
-                    if (!user?.unidadeId || !user?.franquiaId) {
-                      toast.error('Informações de unidade não encontradas');
+                    if (!user?.franquiaId) {
+                      toast.error('Informações da franquia não encontradas');
                       return;
                     }
                     try {
-                      const senhaCriada = await gerarSenhaPagamento(
-                        user.unidadeId,
+                      const unidadeId = user.unidadeId;
+                      if (!unidadeId) {
+                        toast.error('Unidade não configurada para este usuário');
+                        return;
+                      }
+
+                      await gerarSenhaPagamento(
+                        unidadeId,
                         user.franquiaId,
                         motoboy.id,
                         motoboy.nome,
@@ -193,22 +164,14 @@ export default function FilaPagamento() {
                         queryKey: ['senhas-pagamento'],
                       });
 
-                      const senhaParaChamar: SenhaPagamento | undefined = Array.isArray(
-                        senhaCriada,
-                      )
-                        ? (senhaCriada[0] as any)
-                        : (senhaCriada as any);
-
-                      if (senhaParaChamar) {
-                        chamarMutation.mutate(senhaParaChamar);
-                      }
+                      toast.success('Senha de pagamento criada como pendente');
                     } catch {
-                      toast.error('Erro ao gerar/chamar senha para este motoboy');
+                      toast.error('Erro ao gerar senha para este motoboy');
                     }
                   }}
                 >
-                  <Phone className="w-4 h-4" />
-                  Chamar para pagamento
+                  <Ticket className="w-4 h-4" />
+                  Criar pendente
                 </Button>
               </div>
             ))}

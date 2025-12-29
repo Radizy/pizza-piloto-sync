@@ -11,7 +11,7 @@ interface TVCallAnimationProps {
   onComplete: () => void;
 }
 
-export const TVCallAnimation = ({ show, tipo, nomeMotoboy, bagNome, onComplete }: TVCallAnimationProps) => {
+export const TVCallAnimation = ({ show, tipo, nomeMotoboy, bagNome, callPhrase, bagPhrase, onComplete }: TVCallAnimationProps) => {
   const [stage, setStage] = useState<'moto' | 'tela'>('moto');
 
   useEffect(() => {
