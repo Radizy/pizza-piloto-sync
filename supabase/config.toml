@@ -1,1 +1,7 @@
 project_id = "ffgcjrunrothscuzpkfi"
+
+[functions.criar-cobranca-franquia]
+verify_jwt = true
+
+[functions.webhook-asaas]
+verify_jwt = false
