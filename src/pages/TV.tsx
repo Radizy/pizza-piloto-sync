@@ -13,6 +13,7 @@ import {
   HORARIO_EXPEDIENTE,
   sendWhatsAppMessage,
   SenhaPagamento,
+  fetchSenhasPagamento,
 } from '@/lib/api';
 import { Pizza, User, Volume2, VolumeX, RotateCcw, Package, UserPlus, Trophy, Wine } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
@@ -132,6 +133,14 @@ export default function TV() {
         dataFim: dataFim.toISOString(),
       }),
     refetchInterval: 10000, // Atualiza a cada 10 segundos
+  });
+
+  // Query para senhas de pagamento (para mostrar chamado na TV)
+  const { data: senhasPagamento = [] } = useQuery({
+    queryKey: ['senhas-pagamento-tv', user.unidadeId],
+    queryFn: () => fetchSenhasPagamento(user.unidadeId!),
+    enabled: !!user.unidadeId,
+    refetchInterval: 5000,
   });
 
   // Calcular top 3 por saídas e entregas (com desempate por quem chegou primeiro)
@@ -435,7 +444,7 @@ export default function TV() {
     });
   }, [calledEntregadores, handleCallAnnouncement, updateMutation, deliveringQueue]);
 
-  // Escutar chamadas de pagamento para TV
+  // Escutar chamadas de pagamento para TV via realtime e também via polling
   useEffect(() => {
     if (!user?.unidadeId) return;
 
@@ -462,6 +471,12 @@ export default function TV() {
       supabase.removeChannel(pagamentosChannel);
     };
   }, [user?.unidadeId]);
+
+  // Atualizar exibição de pagamento com base nas senhas carregadas (fallback via polling)
+  useEffect(() => {
+    const chamadaAtual = senhasPagamento.find((s) => s.status === 'chamado');
+    setDisplayingPagamento(chamadaAtual || null);
+  }, [senhasPagamento]);
 
   const handleReturn = async (entregador: Entregador) => {
     try {
