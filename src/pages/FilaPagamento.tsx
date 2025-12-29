@@ -109,7 +109,7 @@ export default function FilaPagamento() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
         <div className="bg-card border border-border rounded-lg p-4">
           <div className="flex items-center gap-2 mb-1">
             <div className="w-3 h-3 rounded-full bg-amber-500" />
@@ -146,14 +146,14 @@ export default function FilaPagamento() {
                 className="bg-card border rounded-lg p-4 flex flex-col gap-2"
               >
                 <div>
-                  <p className="font-semibold text-lg">{motoboy.nome}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="font-semibold text-lg leading-tight">{motoboy.nome}</p>
+                  <p className="text-xs text-muted-foreground break-all">
                     {motoboy.telefone}
                   </p>
                 </div>
                 <Button
                   size="sm"
-                  className="mt-2 gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                  className="mt-2 gap-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white"
                   onClick={async () => {
                     if (!user?.franquiaId) {
                       toast.error('Informações da franquia não encontradas');
@@ -162,13 +162,13 @@ export default function FilaPagamento() {
                     try {
                       // Tenta usar unidadeId do usuário; se não houver, resolve pela tabela de unidades
                       let unidadeId = user.unidadeId;
-                       if (!unidadeId) {
-                         const { data: unidadeRow, error } = await supabase
-                           .from('unidades')
-                           .select('id')
-                           .eq('franquia_id', user.franquiaId)
-                           .ilike('nome_loja', `%${selectedUnit as string}%`)
-                           .maybeSingle();
+                      if (!unidadeId) {
+                        const { data: unidadeRow, error } = await supabase
+                          .from('unidades')
+                          .select('id')
+                          .eq('franquia_id', user.franquiaId)
+                          .ilike('nome_loja', `%${selectedUnit as string}%`)
+                          .maybeSingle();
 
                         if (error || !unidadeRow) {
                           toast.error('Unidade não configurada para este usuário');

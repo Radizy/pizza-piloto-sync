@@ -58,6 +58,7 @@ export function ModulosConfig() {
   const tvPrompts = (franquia?.config_pagamento as any)?.tv_prompts || {
     entrega_chamada: 'É a sua vez {nome}',
     entrega_bag: 'Pegue a {bag}',
+    pagamento_chamada: 'Olá {nome}, sua senha é {senha}. Dirija-se ao caixa da {unidade} para receber.',
   };
 
   const whatsappConfig = (franquia?.config_pagamento as any)?.whatsapp || null;
@@ -117,7 +118,7 @@ export function ModulosConfig() {
 }`;
 
   const savePromptsMutation = useMutation({
-    mutationFn: async (payload: { entrega_chamada: string; entrega_bag: string }) => {
+    mutationFn: async (payload: { entrega_chamada: string; entrega_bag: string; pagamento_chamada: string }) => {
       if (!user?.franquiaId) return;
       const currentConfig = (franquia?.config_pagamento as any) || {};
       const newConfig = {
@@ -199,12 +200,12 @@ export function ModulosConfig() {
                 <Sparkles className="w-4 h-4 text-primary" />
                 <span className="text-sm font-semibold">Textos da animação da TV (por franquia)</span>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Use <code>{'{nome}'}</code> para o nome do motoboy e <code>{'{bag}'}</code> para o nome da bag.
-              </p>
+                <p className="text-xs text-muted-foreground">
+                  Use <code>{'{nome}'}</code> para o nome do motoboy, <code>{'{bag}'}</code> para o nome da bag, <code>{'{senha}'}</code> para o número da senha e <code>{'{unidade}'}</code> para o nome da loja.
+                </p>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="tv-entrega-chamada">Frase de chamada</Label>
+                  <Label htmlFor="tv-entrega-chamada">Frase de chamada de entrega (TV)</Label>
                   <Input
                     id="tv-entrega-chamada"
                     defaultValue={tvPrompts.entrega_chamada}
@@ -212,12 +213,13 @@ export function ModulosConfig() {
                       savePromptsMutation.mutate({
                         entrega_chamada: e.target.value || tvPrompts.entrega_chamada,
                         entrega_bag: tvPrompts.entrega_bag,
+                        pagamento_chamada: tvPrompts.pagamento_chamada,
                       })
                     }
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="tv-entrega-bag">Frase da bag</Label>
+                  <Label htmlFor="tv-entrega-bag">Frase da bag (TV)</Label>
                   <Input
                     id="tv-entrega-bag"
                     defaultValue={tvPrompts.entrega_bag}
@@ -225,10 +227,25 @@ export function ModulosConfig() {
                       savePromptsMutation.mutate({
                         entrega_chamada: tvPrompts.entrega_chamada,
                         entrega_bag: e.target.value || tvPrompts.entrega_bag,
+                        pagamento_chamada: tvPrompts.pagamento_chamada,
                       })
                     }
                   />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tv-pagamento-chamada">Frase de chamada para pagamento (WhatsApp/TV)</Label>
+                <Input
+                  id="tv-pagamento-chamada"
+                  defaultValue={tvPrompts.pagamento_chamada}
+                  onBlur={(e) =>
+                    savePromptsMutation.mutate({
+                      entrega_chamada: tvPrompts.entrega_chamada,
+                      entrega_bag: tvPrompts.entrega_bag,
+                      pagamento_chamada: e.target.value || tvPrompts.pagamento_chamada,
+                    })
+                  }
+                />
               </div>
             </div>
 
