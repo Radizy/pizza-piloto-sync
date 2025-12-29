@@ -996,7 +996,7 @@ export default function SuperAdmin() {
                             {p.nome}
                           </CardTitle>
                           <p className="text-xs text-muted-foreground">
-                            {p.tipo === 'mensal' ? 'Mensal' : 'Anual'} • {p.duracao_meses} mês(es) • R$ {p.valor_base.toFixed(2)}
+                            {p.tipo === 'mensal' ? 'Mensal' : 'Anual'} • {p.duracao_meses} mês(es) • R$ {Number(p.valor_base ?? 0).toFixed(2)}
                           </p>
                           <p className="text-[11px] text-muted-foreground mt-1">
                             {p.ativo ? 'Plano ativo' : 'Plano inativo'} • Ativo em {lojasComPlano} loja(s)
@@ -1190,9 +1190,9 @@ export default function SuperAdmin() {
                 <CardContent>
                   <p className="text-2xl font-mono font-bold">
                     R$
-                    {franquiasFinanceiro
-                      .reduce((acc, f) => acc + f.faturamentoEstimado, 0)
-                      .toFixed(2)}
+                    {Number(
+                      franquiasFinanceiro.reduce((acc, f) => acc + (f.faturamentoEstimado ?? 0), 0)
+                    ).toFixed(2)}
                   </p>
                 </CardContent>
               </Card>
@@ -1214,7 +1214,12 @@ export default function SuperAdmin() {
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                         <XAxis dataKey="nome" tick={{ fontSize: 12 }} />
                         <YAxis tickFormatter={(v) => `R$ ${v}`} tick={{ fontSize: 12 }} />
-                        <Tooltip formatter={(value: any) => [`R$ ${Number(value).toFixed(2)}`, 'Faturamento']} />
+                        <Tooltip
+                          formatter={(value: any) => [
+                            `R$ ${Number((value as number | string | null) ?? 0).toFixed(2)}`,
+                            'Faturamento',
+                          ]}
+                        />
                         <Legend />
                         <Bar dataKey="faturamentoEstimado" fill="hsl(var(--primary))" name="Faturamento" />
                       </BarChart>
@@ -1259,7 +1264,7 @@ export default function SuperAdmin() {
                               </td>
                               <td className="px-3 py-1.5">{vencStr}</td>
                               <td className="px-3 py-1.5 text-right">
-                                R$ {f.faturamentoEstimado.toFixed(2)}
+                                R$ {Number(f.faturamentoEstimado ?? 0).toFixed(2)}
                               </td>
                             </tr>
                           );
