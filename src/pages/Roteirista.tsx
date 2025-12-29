@@ -452,7 +452,7 @@ export default function Roteirista() {
         )}
       </Button>
 
-      {/* Stats Row + TV preview */}
+      {/* Stats Row + TV preview (ao vivo) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="bg-card border border-border rounded-lg p-4">
           <div className="flex items-center gap-2 mb-1">
@@ -479,6 +479,7 @@ export default function Roteirista() {
           franquiaId={user?.franquiaId ?? null}
           unidadeNome={selectedUnit as any}
           unidadeId={user?.unidadeId ?? null}
+          unidadeSlug={selectedUnit as any}
         />
       </div>
 

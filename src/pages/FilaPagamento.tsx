@@ -105,7 +105,7 @@ export default function FilaPagamento() {
     <Layout>
       <BackButton />
 
-      {/* Stats + TV preview */}
+      {/* Stats + TV preview (ao vivo) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="bg-card border border-border rounded-lg p-4">
           <div className="flex items-center gap-2 mb-1">
@@ -134,6 +134,7 @@ export default function FilaPagamento() {
           franquiaId={user?.franquiaId ?? null}
           unidadeNome={selectedUnit as string}
           unidadeId={user?.unidadeId ?? null}
+          unidadeSlug={selectedUnit as string}
         />
       </div>
 
