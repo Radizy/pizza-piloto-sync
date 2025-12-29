@@ -83,6 +83,13 @@ export default function FilaPagamento() {
   const senhasPendentes = senhas.filter((s) => s.status !== 'atendido');
   const senhasPagas = senhas.filter((s) => s.status === 'atendido');
 
+  // Motoboys que ainda não possuem senha pendente/ativa
+  const motoboysFilaPagamento = motoboysAptos.filter((motoboy) => {
+    return !senhasPendentes.some(
+      (senha) => senha.entregador_id && senha.entregador_id === motoboy.id,
+    );
+  });
+
   if (!selectedUnit) {
     return (
       <Layout>
@@ -134,13 +141,13 @@ export default function FilaPagamento() {
           <Ticket className="w-5 h-5 text-amber-500" />
           Motoboys na fila de pagamento
         </h2>
-        {motoboysAptos.length === 0 ? (
+        {motoboysFilaPagamento.length === 0 ? (
           <div className="text-center py-10 bg-card border border-dashed border-border rounded-lg">
             <p className="text-muted-foreground">Nenhum motoboy apto a receber no momento.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {motoboysAptos.map((motoboy) => (
+            {motoboysFilaPagamento.map((motoboy) => (
               <div
                 key={motoboy.id}
                 className="bg-card border rounded-lg p-4 flex flex-col gap-2"
