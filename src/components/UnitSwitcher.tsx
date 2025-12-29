@@ -39,20 +39,19 @@ export function UnitSwitcher() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         {user.availableUnits.map((unit) => (
-          <DropdownMenuItem
-            key={unit.id}
-            onClick={() => handleChangeUnit(unit.unidade_nome)}
-            className="flex items-center justify-between cursor-pointer"
-          >
-            <div className="flex flex-col">
-              <span className="font-medium">{unit.nome_loja}</span>
-              <span className="text-xs text-muted-foreground">{unit.unidade_nome}</span>
-            </div>
-            {selectedUnit === unit.unidade_nome && (
-              <Check className="w-4 h-4 text-primary" />
-            )}
-          </DropdownMenuItem>
-        ))}
+           <DropdownMenuItem
+             key={unit.id}
+             onClick={() => handleChangeUnit(unit.unidade_nome)}
+             className="flex items-center justify-between cursor-pointer"
+           >
+             <div className="flex flex-col">
+               <span className="font-medium">{unit.nome_loja}</span>
+             </div>
+             {selectedUnit === unit.unidade_nome && (
+               <Check className="w-4 h-4 text-primary" />
+             )}
+           </DropdownMenuItem>
+         ))}
       </DropdownMenuContent>
     </DropdownMenu>
   );

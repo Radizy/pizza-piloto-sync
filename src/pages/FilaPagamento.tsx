@@ -7,6 +7,7 @@ import {
   gerarSenhaPagamento,
   fetchSenhasPagamento,
   atenderSenhaPagamento,
+  chamarSenhaPagamento,
   SenhaPagamento,
   fetchEntregadores,
   shouldShowInQueue,
@@ -64,6 +65,18 @@ export default function FilaPagamento() {
     },
     onError: () => {
       toast.error('Erro ao marcar como pago');
+    },
+  });
+
+  // Mutation para chamar senha (mostrar na TV)
+  const chamarMutation = useMutation({
+    mutationFn: (senhaId: string) => chamarSenhaPagamento(senhaId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['senhas-pagamento'] });
+      toast.success('Motoboy chamado para receber');
+    },
+    onError: () => {
+      toast.error('Erro ao chamar para receber');
     },
   });
 
@@ -149,13 +162,13 @@ export default function FilaPagamento() {
                     try {
                       // Tenta usar unidadeId do usuário; se não houver, resolve pela tabela de unidades
                       let unidadeId = user.unidadeId;
-                      if (!unidadeId) {
-                        const { data: unidadeRow, error } = await supabase
-                          .from('unidades')
-                          .select('id')
-                          .eq('franquia_id', user.franquiaId)
-                          .eq('nome_loja', selectedUnit as string)
-                          .maybeSingle();
+                       if (!unidadeId) {
+                         const { data: unidadeRow, error } = await supabase
+                           .from('unidades')
+                           .select('id')
+                           .eq('franquia_id', user.franquiaId)
+                           .ilike('nome_loja', `%${selectedUnit as string}%`)
+                           .maybeSingle();
 
                         if (error || !unidadeRow) {
                           toast.error('Unidade não configurada para este usuário');
@@ -225,14 +238,20 @@ export default function FilaPagamento() {
                       )}
                     </div>
                     <Button
-                      onClick={() => atenderMutation.mutate(senha.id)}
-                      disabled={atenderMutation.isPending}
-                      variant="outline"
-                      className="w-full gap-2 border-green-500 hover:bg-green-500 hover:text-white"
-                    >
-                      <Check className="w-4 h-4" />
-                      Marcar como pago
-                    </Button>
+                       onClick={() => {
+                         if (senha.status === 'aguardando') {
+                           chamarMutation.mutate(senha.id);
+                         } else {
+                           atenderMutation.mutate(senha.id);
+                         }
+                       }}
+                       disabled={atenderMutation.isPending || chamarMutation.isPending}
+                       variant="outline"
+                       className="w-full gap-2 border-green-500 hover:bg-green-500 hover:text-white"
+                     >
+                       <Check className="w-4 h-4" />
+                       {senha.status === 'aguardando' ? 'Chamar para receber' : 'Marcar como pago'}
+                     </Button>
                   </div>
                 ))}
               </div>
