@@ -312,18 +312,24 @@ export default function TV() {
   const defaultTvPrompts = {
     entrega_chamada: 'É a sua vez {nome}',
     entrega_bag: 'Pegue a {bag}',
+    pagamento_chamada: 'Senha {senha}\n{nome}, é a sua vez de receber!\nVá até o caixa imediatamente.',
   };
 
   const tvPrompts = (franquiaConfig?.config_pagamento as any)?.tv_prompts || defaultTvPrompts;
 
-  const buildTvTexts = (nome: string, bagName?: string) => {
+  const buildTvTexts = (nome: string, bagName?: string, senha?: string) => {
     const chamadaTemplate = tvPrompts.entrega_chamada || defaultTvPrompts.entrega_chamada;
     const bagTemplate = tvPrompts.entrega_bag || defaultTvPrompts.entrega_bag;
+    const pagamentoTemplate = tvPrompts.pagamento_chamada || defaultTvPrompts.pagamento_chamada;
 
     const chamadaText = chamadaTemplate.replace('{nome}', nome);
     const bagText = bagTemplate.replace('{bag}', bagName || 'sua bag');
+    const pagamentoText = pagamentoTemplate
+      .replace('{nome}', nome)
+      .replace('{senha}', senha || '')
+      .replace('{unidade}', systemConfig?.nome_loja || systemName || 'sua loja');
 
-    return { chamadaText, bagText };
+    return { chamadaText, bagText, pagamentoText };
   };
 
   // Play audio and TTS quando alguém é chamado
@@ -564,13 +570,20 @@ export default function TV() {
          }
          callPhrase={
            displayingPagamento && displayingPagamento.entregador_nome
-             ? buildTvTexts(displayingPagamento.entregador_nome, undefined).chamadaText
+             ? buildTvTexts(
+                 displayingPagamento.entregador_nome,
+                 undefined,
+                 displayingPagamento.numero_senha,
+               ).pagamentoText
              : (!displayingPagamento && displayingCalled
-                 ? buildTvTexts(displayingCalled.entregador.nome, (() => {
-                     const bagId = displayingCalled.entregador.tipo_bag;
-                     if (!bagId) return undefined;
-                     return franquiaBagTipos.find((b) => b.id === bagId)?.nome || bagId;
-                   })()).chamadaText
+                 ? buildTvTexts(
+                     displayingCalled.entregador.nome,
+                     (() => {
+                       const bagId = displayingCalled.entregador.tipo_bag;
+                       if (!bagId) return undefined;
+                       return franquiaBagTipos.find((b) => b.id === bagId)?.nome || bagId;
+                     })(),
+                   ).chamadaText
                  : undefined)
          }
          bagPhrase={
