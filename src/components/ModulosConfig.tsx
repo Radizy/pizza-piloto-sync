@@ -135,6 +135,7 @@ export function ModulosConfig() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['franquia-modulos', user?.franquiaId] });
+      queryClient.invalidateQueries({ queryKey: ['franquia-config-tv', user?.franquiaId] });
       toast.success('Textos da TV atualizados para a franquia!');
     },
     onError: () => {
