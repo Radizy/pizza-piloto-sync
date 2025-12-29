@@ -47,6 +47,7 @@ export default function TV() {
   const lastCacheClean = useRef<number>(Date.now());
   const lastCallTime = useRef<number>(0);
   const processedCallsRef = useRef<Set<string>>(new Set());
+  const lastPagamentoIdRef = useRef<string | null>(null);
 
   // Apenas usuários autenticados com unidade podem acessar (rota já é protegida,
   // mas aqui garantimos a unidade correta)
@@ -466,7 +467,8 @@ export default function TV() {
         },
         (payload) => {
           const novaSenha = payload.new as SenhaPagamento;
-          if (novaSenha.status === 'chamado') {
+          if (novaSenha.status === 'chamado' && novaSenha.id !== lastPagamentoIdRef.current) {
+            lastPagamentoIdRef.current = novaSenha.id;
             setDisplayingPagamento(novaSenha);
           }
         }
@@ -480,8 +482,14 @@ export default function TV() {
 
   // Atualizar exibição de pagamento com base nas senhas carregadas (fallback via polling)
   useEffect(() => {
-    const chamadaAtual = senhasPagamento.find((s) => s.status === 'chamado');
-    setDisplayingPagamento(chamadaAtual || null);
+    const chamadaAtual = senhasPagamento.find(
+      (s) => s.status === 'chamado' && s.id !== lastPagamentoIdRef.current,
+    );
+
+    if (chamadaAtual) {
+      lastPagamentoIdRef.current = chamadaAtual.id;
+      setDisplayingPagamento(chamadaAtual);
+    }
   }, [senhasPagamento]);
 
   const handleReturn = async (entregador: Entregador) => {
