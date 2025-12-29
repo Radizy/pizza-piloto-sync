@@ -32,9 +32,11 @@ Antes de configurar, é importante entender alguns conceitos:
   - Cobrança cancelada.
 - Ela **não substitui** o gateway – apenas permite **automatizar** o retorno das informações
   de pagamento para o sistema.
+- No nosso backend existe uma **função de webhook** que, ao receber a confirmação de
+  pagamento, atualiza automaticamente o `status_pagamento` e a `data_vencimento` da franquia.
+- Para segurança, essa URL pode receber um parâmetro secreto na query string
+  (por exemplo: `?secret=SEU_SEGREDO_FORTE`) que será validado pelo backend.
 
-> **Importante:** neste momento, o campo de webhook no sistema é **opcional**.
-> Você pode configurar o gateway e a API Key normalmente, mesmo sem ter a URL de webhook pronta.
 
 ---
 
@@ -65,13 +67,14 @@ sessão chamada **Pagamento** (config_pagamento). Os principais campos são:
 - Campo: `Webhook de cobrança (URL do seu backend)`
 - O que é: URL do SEU backend para receber notificações automáticas do gateway
   (confirmação de PIX, boletos pagos, vencidos etc.).
-- Situação atual:
-  - **Opcional** – pode ser deixado em branco.
-  - No futuro, quando o backend de webhook estiver implementado, você receberá
-    a URL correta para preencher aqui e também no painel do gateway.
+- Como funciona neste sistema:
+  - Existe uma função de webhook que recebe o evento do gateway.
+  - Ela valida um **segredo** (query string `?secret=...`) configurado por franquia.
+  - Em seguida, registra a cobrança e, se o pagamento estiver aprovado, **renova
+    automaticamente** a franquia (atualizando `status_pagamento` e `data_vencimento`).
+- Recomenda-se registrar também no campo de configuração (config_pagamento) um
+  `webhook_secret` forte e usá-lo na URL (ex.: `...?secret=SEU_SEGREDO_FORTE`).
 
-> Enquanto você não tiver essa URL, **não há problema** em deixar o campo vazio.
-> O sistema continuará funcionando para **criar cobranças** manualmente.
 
 ---
 
@@ -109,26 +112,29 @@ sessão chamada **Pagamento** (config_pagamento). Os principais campos são:
 
 A partir desse momento, o sistema consegue usar o Asaas como gateway para criar cobranças.
 
-### 3.4. (Opcional) Configurar o webhook no painel Asaas
+### 3.4. Configurar o webhook no painel Asaas
 
-> Esta etapa depende de você já ter recebido uma **URL de webhook** do seu backend.
+Nesta etapa você aponta o Asaas para a URL do webhook do sistema.
 
 1. No painel Asaas, vá até a seção de **Webhooks / Notificações de eventos**.
-2. Crie um novo webhook apontando para a URL fornecida
-   (ex.: `https://seudominio.com/webhook-cobranca-asaas`).
+2. Crie um novo webhook apontando para a URL fornecida pela equipe técnica do sistema
+   (ex.: `https://seudominio.com/webhook-cobranca-asaas?secret=SEU_SEGREDO_FORTE`).
 3. Selecione os eventos que você deseja receber, por exemplo:
    - Pagamento confirmado.
    - Pagamento vencido.
    - Pagamento cancelado.
 4. Salve a configuração.
 
-Quando o backend de webhook estiver implementado, o fluxo será:
+Quando o backend de webhook está ativo, o fluxo fica assim:
 
-- O sistema cria uma cobrança no Asaas usando a **API Key**.
+- O sistema cria uma cobrança no Asaas usando a **API Key**, o valor da franquia e
+  preenche `externalReference` com o **ID da franquia**.
 - Quando o pagamento for confirmado, o Asaas chama a **URL de webhook**.
-- O backend interpreta o evento e atualiza automaticamente:
-  - `status_pagamento` da franquia.
-  - `data_vencimento` da franquia.
+- O backend valida o segredo (`?secret=...`), registra a cobrança na tabela
+  `franquia_cobrancas` e atualiza automaticamente:
+  - `status_pagamento` da franquia para `ativo`.
+  - `data_vencimento` com a nova data calculada a partir do plano.
+
 
 ---
 
@@ -162,11 +168,11 @@ Quando o backend de webhook estiver implementado, o fluxo será:
      - Se já tiver uma URL de webhook definida pelo backend, cole aqui.
 4. Salve a franquia.
 
-### 4.4. (Opcional) Configurar o webhook no painel Seabra
+### 4.4. Configurar o webhook no painel Seabra
 
 1. No painel da Seabra, vá até a área de **Webhooks / Notificações / Callbacks**.
-2. Cadastre a URL de webhook fornecida pelo backend
-   (ex.: `https://seudominio.com/webhook-cobranca-seabra`).
+2. Cadastre a URL de webhook fornecida pela equipe técnica
+   (ex.: `https://seudominio.com/webhook-cobranca-seabra?secret=SEU_SEGREDO_FORTE`).
 3. Selecione os eventos relevantes (pagamento aprovado, vencido, cancelado etc.).
 4. Salve.
 
@@ -174,7 +180,9 @@ Assim como no Asaas, o fluxo ideal será:
 
 - O sistema cria a cobrança via API usando a API Key da Seabra.
 - A Seabra envia uma notificação HTTP (webhook) para a URL configurada.
-- O backend processa a notificação e atualiza automaticamente os dados da franquia.
+- O backend valida o segredo, registra a cobrança e atualiza automaticamente os dados
+  da franquia (incluindo `status_pagamento` e `data_vencimento`).
+
 
 ---
 
@@ -190,18 +198,23 @@ Assim como no Asaas, o fluxo ideal será:
 
 ---
 
-## 6. Próximos passos (quando o webhook estiver disponível)
+## 6. Fluxo completo de automação com webhook
 
-Em uma próxima etapa, o backend poderá expor uma URL de webhook única para cobranças, por exemplo:
+Com o backend de webhook ativo, o fluxo de cobrança automatizada funciona assim:
 
-- `https://seudominio.com/webhook-cobranca`
-
-Quando isso acontecer, o passo a passo será:
-
-1. Preencher essa URL no campo **Webhook de cobrança (URL do seu backend)** na tela de Franquias.
-2. Configurar a mesma URL nos painéis do Asaas e da Seabra, na área de Webhooks.
-3. Confirmar, em testes, que os pagamentos aprovados estão atualizando automaticamente
-   o **status de pagamento** e a **data de vencimento** das franquias.
-
-Enquanto essa automação completa não estiver ativa, você já pode usar **gateway + API Key**
-para controlar manualmente a cobrança das franquias pelo sistema.
+1. O **Super Admin** configura o gateway (Asaas ou Seabra) e a **API Key** na tela de Franquias.
+2. Opcionalmente, define também:
+   - `customer_id` (identificador do cliente no gateway, no caso do Asaas).
+   - `plano_id` e `valor_plano`.
+   - `webhook_secret` (segredo forte para proteger a URL de webhook).
+3. O botão **PAGAR COM PIX** na tela de financeiro da franquia chama o backend,
+   que cria a cobrança no gateway com o valor correto.
+4. O gateway retorna uma **URL de pagamento** (página do Asaas/Seabra) e o sistema
+   abre essa página para o usuário finalizar o pagamento.
+5. Quando o pagamento é aprovado, o gateway envia uma requisição HTTP (webhook)
+   para a URL configurada (incluindo o `?secret=...`).
+6. O backend:
+   - Valida o segredo.
+   - Registra/atualiza a cobrança na tabela `franquia_cobrancas`.
+   - Atualiza `status_pagamento` e `data_vencimento` da franquia.
+7. Na próxima vez que a franquia acessar o sistema, o status já estará atualizado.

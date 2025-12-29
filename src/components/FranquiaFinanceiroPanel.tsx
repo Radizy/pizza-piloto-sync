@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { differenceInCalendarDays, format } from 'date-fns';
+import { toast } from 'sonner';
 
 interface FranquiaFinanceiro {
   id: string;
@@ -25,6 +26,7 @@ interface PlanoResumo {
 
 export function FranquiaFinanceiroPanel() {
   const { user } = useAuth();
+  const [isPaying, setIsPaying] = useState(false);
 
   const { data: franquia, isLoading: isLoadingFranquia } = useQuery<FranquiaFinanceiro | null>({
     queryKey: ['franquia-financeiro', user?.franquiaId],
@@ -74,19 +76,39 @@ export function FranquiaFinanceiroPanel() {
     return null;
   }, [franquia?.config_pagamento, planoAtual?.valor_base]);
 
-  const handlePagarPix = () => {
-    const cfg = (franquia?.config_pagamento as any) || {};
-    const linkPagamento = cfg.link_pagamento as string | undefined;
-
-    if (linkPagamento) {
-      window.open(linkPagamento, '_blank');
+  const handlePagarPix = async () => {
+    if (!franquia || !valorPlano) {
+      toast.error('Não foi possível identificar o valor da franquia.');
       return;
     }
 
-    const mensagem = encodeURIComponent(
-      `Olá! Quero regularizar o pagamento da franquia ${franquia?.nome_franquia ?? ''}.`,
-    );
-    window.open(`https://wa.me/5500000000000?text=${mensagem}`, '_blank');
+    try {
+      setIsPaying(true);
+
+      const { data, error } = await supabase.functions.invoke('criar-cobranca-franquia', {
+        body: { franquiaId: franquia.id },
+      });
+
+      if (error) {
+        console.error('Erro ao criar cobrança:', error);
+        toast.error('Erro ao criar cobrança. Tente novamente.');
+        return;
+      }
+
+      const checkoutUrl = (data as any)?.checkoutUrl as string | undefined;
+
+      if (!checkoutUrl) {
+        toast.error('Cobrança criada, mas o gateway não retornou um link de pagamento.');
+        return;
+      }
+
+      window.open(checkoutUrl, '_blank');
+    } catch (err) {
+      console.error('Erro inesperado ao criar cobrança:', err);
+      toast.error('Erro inesperado ao gerar a cobrança.');
+    } finally {
+      setIsPaying(false);
+    }
   };
 
   if (isLoadingFranquia) {
@@ -201,8 +223,13 @@ export function FranquiaFinanceiroPanel() {
               </div>
             </div>
 
-            <Button type="button" className="w-full" onClick={handlePagarPix} disabled={!valorPlano}>
-              PAGAR COM PIX
+            <Button
+              type="button"
+              className="w-full"
+              onClick={handlePagarPix}
+              disabled={!valorPlano || isPaying}
+            >
+              {isPaying ? 'Gerando cobrança…' : 'PAGAR COM PIX'}
             </Button>
           </CardContent>
         </Card>
