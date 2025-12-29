@@ -116,7 +116,7 @@ export default function FilaPagamento() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <div className="bg-card border border-border rounded-lg p-4">
           <div className="flex items-center gap-2 mb-1">
             <div className="w-3 h-3 rounded-full bg-amber-500" />
@@ -132,6 +132,13 @@ export default function FilaPagamento() {
             <span className="text-sm text-muted-foreground">Senhas pendentes</span>
           </div>
           <p className="text-3xl font-bold font-mono">{senhasPendentes.length}</p>
+        </div>
+        <div className="bg-card border border-border rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-3 h-3 rounded-full bg-blue-500" />
+            <span className="text-sm text-muted-foreground">Pagos hoje</span>
+          </div>
+          <p className="text-3xl font-bold font-mono">{senhasPagas.length}</p>
         </div>
       </div>
 
@@ -197,7 +204,7 @@ export default function FilaPagamento() {
                         franquiaId = unidadeRow.franquia_id as string;
                       }
 
-                      const senha = await gerarSenhaPagamento(
+                      await gerarSenhaPagamento(
                         unidadeId,
                         franquiaId!,
                         motoboy.id,
@@ -210,13 +217,13 @@ export default function FilaPagamento() {
 
                       toast.success('Senha gerada para pagamento');
                     } catch (error) {
-                      console.error('Erro ao chamar motoboy para pagamento:', error);
-                      toast.error('Erro ao chamar motoboy para pagamento');
+                      console.error('Erro ao gerar senha para pagamento:', error);
+                      toast.error('Erro ao gerar senha para pagamento');
                     }
                   }}
                 >
                   <Ticket className="w-4 h-4" />
-                  Chamar para pagamento
+                  Gerar senha para pagamento
                 </Button>
               </div>
             ))}
@@ -230,6 +237,81 @@ export default function FilaPagamento() {
         </div>
       ) : (
         <div className="space-y-8">
+          {/* Ações em massa */}
+          {motoboysFilaPagamento.length > 0 && (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+              <p className="text-sm text-muted-foreground">
+                {motoboysFilaPagamento.length} motoboy(s) na fila sem senha gerada.
+              </p>
+              <Button
+                variant="outline"
+                className="w-full sm:w-auto gap-2"
+                onClick={async () => {
+                  try {
+                    // Resolver unidade e franquia uma única vez
+                    let unidadeId = user?.unidadeId as string | undefined;
+                    let franquiaId: string | null = null;
+
+                    if (unidadeId) {
+                      const { data: unidadeRow, error } = await supabase
+                        .from('unidades')
+                        .select('id, franquia_id')
+                        .eq('id', unidadeId)
+                        .maybeSingle();
+
+                      if (error || !unidadeRow || !unidadeRow.franquia_id) {
+                        toast.error('Configuração da unidade não encontrada');
+                        return;
+                      }
+
+                      unidadeId = unidadeRow.id as string;
+                      franquiaId = unidadeRow.franquia_id as string;
+                    } else {
+                      const { data: unidadeRow, error } = await supabase
+                        .from('unidades')
+                        .select('id, franquia_id')
+                        .ilike('nome_loja', `%${selectedUnit as string}%`)
+                        .maybeSingle();
+
+                      if (error || !unidadeRow || !unidadeRow.franquia_id) {
+                        toast.error('Configuração da unidade não encontrada');
+                        return;
+                      }
+
+                      unidadeId = unidadeRow.id as string;
+                      franquiaId = unidadeRow.franquia_id as string;
+                    }
+
+                    // Gerar senhas em sequência com delay aleatório entre 3 e 5 segundos
+                    for (const motoboy of motoboysFilaPagamento) {
+                      await gerarSenhaPagamento(
+                        unidadeId,
+                        franquiaId!,
+                        motoboy.id,
+                        motoboy.nome,
+                      );
+
+                      const delayMs = 3000 + Math.random() * 2000; // 3 a 5 segundos
+                      await new Promise((resolve) => setTimeout(resolve, delayMs));
+                    }
+
+                    await queryClient.invalidateQueries({
+                      queryKey: ['senhas-pagamento'],
+                    });
+
+                    toast.success('Senhas geradas para todos os motoboys na fila');
+                  } catch (error) {
+                    console.error('Erro ao gerar senhas em massa:', error);
+                    toast.error('Erro ao gerar senhas em massa');
+                  }
+                }}
+              >
+                <Ticket className="w-4 h-4" />
+                Gerar senha para todos
+              </Button>
+            </div>
+          )}
+
           {/* Senhas Pendentes */}
           <div>
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
