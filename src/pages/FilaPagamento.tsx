@@ -147,10 +147,21 @@ export default function FilaPagamento() {
                       return;
                     }
                     try {
-                      const unidadeId = user.unidadeId;
+                      // Tenta usar unidadeId do usuário; se não houver, resolve pela tabela de unidades
+                      let unidadeId = user.unidadeId;
                       if (!unidadeId) {
-                        toast.error('Unidade não configurada para este usuário');
-                        return;
+                        const { data: unidadeRow, error } = await supabase
+                          .from('unidades')
+                          .select('id')
+                          .eq('franquia_id', user.franquiaId)
+                          .eq('nome_loja', selectedUnit as string)
+                          .maybeSingle();
+
+                        if (error || !unidadeRow) {
+                          toast.error('Unidade não configurada para este usuário');
+                          return;
+                        }
+                        unidadeId = unidadeRow.id as string;
                       }
 
                       await gerarSenhaPagamento(
