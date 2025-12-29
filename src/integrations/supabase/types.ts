@@ -124,6 +124,53 @@ export type Database = {
           },
         ]
       }
+      franquia_cobrancas: {
+        Row: {
+          created_at: string
+          external_id: string
+          franquia_id: string
+          gateway: string
+          id: string
+          payload: Json | null
+          status: string
+          updated_at: string
+          valor: number
+          vencimento: string | null
+        }
+        Insert: {
+          created_at?: string
+          external_id: string
+          franquia_id: string
+          gateway: string
+          id?: string
+          payload?: Json | null
+          status: string
+          updated_at?: string
+          valor: number
+          vencimento?: string | null
+        }
+        Update: {
+          created_at?: string
+          external_id?: string
+          franquia_id?: string
+          gateway?: string
+          id?: string
+          payload?: Json | null
+          status?: string
+          updated_at?: string
+          valor?: number
+          vencimento?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "franquia_cobrancas_franquia_id_fkey"
+            columns: ["franquia_id"]
+            isOneToOne: false
+            referencedRelation: "franquias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       franquias: {
         Row: {
           config_pagamento: Json | null
