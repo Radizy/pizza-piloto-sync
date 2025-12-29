@@ -118,40 +118,43 @@ export function TvPaymentPreview({
     };
   }, [unidadeId]);
 
-  // Reagir em tempo real às chamadas de ENTREGA
+  // Reagir às chamadas de ENTREGA usando polling (como a TV)
   useEffect(() => {
     if (!unidadeNome) return;
 
-    const channel = supabase
-      .channel('tv-calls-preview')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'entregadores',
-          filter: `unidade=eq.${unidadeNome}`,
-        },
-        (payload) => {
-          const novo = payload.new as Entregador;
-          if (novo.status === 'chamado') {
-            // Só mostra entrega se não houver pagamento em destaque
-            if (!displayingPagamento) {
-              setDisplayingEntregador(novo);
+    let timer: number | null = null;
 
-              if (entregaTimerRef.current) window.clearTimeout(entregaTimerRef.current);
-              entregaTimerRef.current = window.setTimeout(() => {
-                setDisplayingEntregador(null);
-              }, 5000);
-            }
-          }
-        },
-      )
-      .subscribe();
+    const fetchEntregadoresChamados = async () => {
+      const { data, error } = await supabase
+        .from('entregadores')
+        .select('id, nome, status, tipo_bag, unidade')
+        .eq('unidade', unidadeNome)
+        .eq('status', 'chamado')
+        .order('fila_posicao', { ascending: true });
+
+      if (error) return;
+
+      const chamado = (data as Entregador[] | null)?.[0] ?? null;
+
+      if (chamado) {
+        // Só mostra entrega se não houver pagamento em destaque
+        if (!displayingPagamento) {
+          setDisplayingEntregador(chamado);
+
+          if (entregaTimerRef.current) window.clearTimeout(entregaTimerRef.current);
+          entregaTimerRef.current = window.setTimeout(() => {
+            setDisplayingEntregador(null);
+          }, 5000);
+        }
+      }
+    };
+
+    fetchEntregadoresChamados();
+    timer = window.setInterval(fetchEntregadoresChamados, 3000);
 
     return () => {
+      if (timer) window.clearInterval(timer);
       if (entregaTimerRef.current) window.clearTimeout(entregaTimerRef.current);
-      supabase.removeChannel(channel);
     };
   }, [unidadeNome, displayingPagamento]);
 
