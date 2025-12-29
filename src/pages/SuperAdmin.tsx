@@ -77,6 +77,8 @@ export default function SuperAdmin() {
     provider: 'asas',
     api_key: '',
     webhook_url: '',
+    customer_id: '',
+    webhook_secret: '',
     evolution_url: '',
     evolution_instance: '',
     evolution_api_key: '',
@@ -251,6 +253,8 @@ export default function SuperAdmin() {
       provider: 'asas',
       api_key: '',
       webhook_url: '',
+      customer_id: '',
+      webhook_secret: '',
       evolution_url: '',
       evolution_instance: '',
       evolution_api_key: '',
@@ -278,6 +282,8 @@ export default function SuperAdmin() {
       provider: cfg.provider || 'asas',
       api_key: cfg.api_key || '',
       webhook_url: cfg.webhook_url || '',
+      customer_id: cfg.customer_id || '',
+      webhook_secret: cfg.webhook_secret || '',
       evolution_url: whatsapp.url || '',
       evolution_instance: whatsapp.instance || cfg.evolution_instance || '',
       evolution_api_key: whatsapp.api_key || '',
@@ -365,6 +371,8 @@ export default function SuperAdmin() {
           provider: franquiaForm.provider,
           api_key: franquiaForm.api_key,
           webhook_url: franquiaForm.webhook_url,
+          customer_id: franquiaForm.customer_id || null,
+          webhook_secret: franquiaForm.webhook_secret || null,
           whatsapp:
             franquiaForm.evolution_url &&
             franquiaForm.evolution_api_key &&
@@ -1477,20 +1485,51 @@ export default function SuperAdmin() {
               </div>
 
               <div className="space-y-2">
-                <Label>API Key (não publique)</Label>
+                <Label>API Key do gateway</Label>
                 <Input
                   type="password"
                   value={franquiaForm.api_key}
                   onChange={(e) => setFranquiaForm({ ...franquiaForm, api_key: e.target.value })}
-                  placeholder="Chave da API do gateway"
+                  placeholder="Chave da API do gateway (ex.: Asaas)"
                 />
               </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>ID do cliente no gateway (customer_id)</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Obrigatório para Asaas. Copie o <span className="font-mono">customer_id</span> do
+                    cadastro do cliente no painel do gateway.
+                  </p>
+                  <Input
+                    value={franquiaForm.customer_id}
+                    onChange={(e) => setFranquiaForm({ ...franquiaForm, customer_id: e.target.value })}
+                    placeholder="Ex.: cus_1234567890"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Segredo do webhook gerado pelo sistema</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Defina um segredo forte. Use o mesmo valor na URL de webhook configurada no painel do
+                    gateway para proteger as notificações.
+                  </p>
+                  <Input
+                    type="password"
+                    value={franquiaForm.webhook_secret}
+                    onChange={(e) =>
+                      setFranquiaForm({ ...franquiaForm, webhook_secret: e.target.value })
+                    }
+                    placeholder="Segredo do webhook (ex.: string aleatória longa)"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-2">
-                <Label>Webhook de cobrança (URL do seu backend)</Label>
+                <Label>Webhook de cobrança (URL externa opcional)</Label>
                 <p className="text-xs text-muted-foreground">
-                  Opcional. Use quando tiver uma URL do seu backend para receber notificações automáticas
-                  do gateway (pagamento confirmado, vencido, etc). Se não tiver, pode deixar em branco.
+                  Opcional. Use se você tiver outro sistema que também precise receber notificações do
+                  gateway. O sistema já possui um webhook interno para renovação automática.
                 </p>
                 <Input
                   value={franquiaForm.webhook_url}
