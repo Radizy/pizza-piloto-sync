@@ -11,7 +11,15 @@ interface TVCallAnimationProps {
   onComplete: () => void;
 }
 
-export const TVCallAnimation = ({ show, tipo, nomeMotoboy, bagNome, callPhrase, bagPhrase, onComplete }: TVCallAnimationProps) => {
+export const TVCallAnimation = ({
+  show,
+  tipo,
+  nomeMotoboy,
+  bagNome,
+  callPhrase,
+  bagPhrase,
+  onComplete,
+}: TVCallAnimationProps) => {
   const [stage, setStage] = useState<'moto' | 'tela'>('moto');
 
   useEffect(() => {
@@ -65,11 +73,15 @@ export const TVCallAnimation = ({ show, tipo, nomeMotoboy, bagNome, callPhrase, 
             {/* Mensagem discreta enquanto puxa */}
             <div className="absolute inset-0 flex flex-col items-end justify-center pr-24 pointer-events-none">
               <p className="text-4xl md:text-5xl font-black text-white/80 drop-shadow-lg mb-3 text-right">
-                {tipo === 'PAGAMENTO' ? 'Preparando o pagamento...' : 'Chamando para entrega...'}
+                {tipo === 'PAGAMENTO'
+                  ? 'Preparando o pagamento...'
+                  : callPhrase || `É a sua vez "${nomeMotoboy}"`}
               </p>
-              <p className="text-3xl md:text-4xl font-semibold text-white/70 text-right max-w-2xl">
-                {nomeMotoboy}
-              </p>
+              {isEntrega && (bagPhrase || bagNome) && (
+                <p className="text-3xl md:text-4xl font-semibold text-white/70 text-right max-w-2xl">
+                  {bagPhrase || `Pegue a "${bagNome}"`}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -104,7 +116,7 @@ export const TVCallAnimation = ({ show, tipo, nomeMotoboy, bagNome, callPhrase, 
                 ? `Agora é sua vez, ${nomeMotoboy}!`
                 : callPhrase || `É a sua vez "${nomeMotoboy}"`}
             </p>
-            {tipo === 'ENTREGA' && (bagPhrase || bagNome) && (
+            {isEntrega && (bagPhrase || bagNome) && (
               <p className="text-2xl md:text-3xl text-white/80 font-semibold">
                 {bagPhrase || `Pegue a "${bagNome}"`}
               </p>
