@@ -155,47 +155,63 @@ export default function FilaPagamento() {
                   size="sm"
                   className="mt-2 gap-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white"
                   onClick={async () => {
-                    if (!user?.franquiaId) {
-                      toast.error('Informações da franquia não encontradas');
-                      return;
-                    }
                     try {
-                      // Tenta usar unidadeId do usuário; se não houver, resolve pela tabela de unidades
-                      let unidadeId = user.unidadeId;
-                      if (!unidadeId) {
+                      // Resolver unidade e franquia com base na loja selecionada
+                      let unidadeId = user?.unidadeId as string | undefined;
+                      let franquiaId: string | null = null;
+
+                      if (unidadeId) {
                         const { data: unidadeRow, error } = await supabase
                           .from('unidades')
-                          .select('id')
-                          .eq('franquia_id', user.franquiaId)
+                          .select('id, franquia_id')
+                          .eq('id', unidadeId)
+                          .maybeSingle();
+
+                        if (error || !unidadeRow || !unidadeRow.franquia_id) {
+                          toast.error('Configuração da unidade não encontrada');
+                          return;
+                        }
+
+                        unidadeId = unidadeRow.id as string;
+                        franquiaId = unidadeRow.franquia_id as string;
+                      } else {
+                        const { data: unidadeRow, error } = await supabase
+                          .from('unidades')
+                          .select('id, franquia_id')
                           .ilike('nome_loja', `%${selectedUnit as string}%`)
                           .maybeSingle();
 
-                        if (error || !unidadeRow) {
-                          toast.error('Unidade não configurada para este usuário');
+                        if (error || !unidadeRow || !unidadeRow.franquia_id) {
+                          toast.error('Configuração da unidade não encontrada');
                           return;
                         }
+
                         unidadeId = unidadeRow.id as string;
+                        franquiaId = unidadeRow.franquia_id as string;
                       }
 
-                      await gerarSenhaPagamento(
+                      const senha = await gerarSenhaPagamento(
                         unidadeId,
-                        user.franquiaId,
+                        franquiaId!,
                         motoboy.id,
                         motoboy.nome,
                       );
+
+                      await chamarSenhaPagamento(senha.id);
 
                       await queryClient.invalidateQueries({
                         queryKey: ['senhas-pagamento'],
                       });
 
-                      toast.success('Senha de pagamento criada como pendente');
-                    } catch {
-                      toast.error('Erro ao gerar senha para este motoboy');
+                      toast.success('Motoboy chamado para pagamento');
+                    } catch (error) {
+                      console.error('Erro ao chamar motoboy para pagamento:', error);
+                      toast.error('Erro ao chamar motoboy para pagamento');
                     }
                   }}
                 >
                   <Ticket className="w-4 h-4" />
-                  Criar pendente
+                  Chamar para pagamento
                 </Button>
               </div>
             ))}
