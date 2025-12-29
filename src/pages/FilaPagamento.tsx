@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { Ticket, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
+import { TvPaymentPreview } from '@/components/TvPaymentPreview';
 
 export default function FilaPagamento() {
   const { selectedUnit } = useUnit();
@@ -104,19 +105,8 @@ export default function FilaPagamento() {
     <Layout>
       <BackButton />
 
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold font-mono mb-2 flex items-center gap-3">
-          <Ticket className="w-8 h-8 text-amber-500" />
-          Fila de Pagamento
-        </h1>
-        <p className="text-muted-foreground">
-          Gestão de senhas para pagamento •{' '}
-          <span className="font-semibold text-foreground">{selectedUnit}</span>
-        </p>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+      {/* Stats + TV preview */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="bg-card border border-border rounded-lg p-4">
           <div className="flex items-center gap-2 mb-1">
             <div className="w-3 h-3 rounded-full bg-amber-500" />
@@ -140,6 +130,7 @@ export default function FilaPagamento() {
           </div>
           <p className="text-3xl font-bold font-mono">{senhasPagas.length}</p>
         </div>
+        <TvPaymentPreview franquiaId={user?.franquiaId ?? null} unidadeNome={selectedUnit as string} />
       </div>
 
       {/* Motoboys que aparecem na fila (disponivel) */}
