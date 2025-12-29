@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Package, Sparkles, Webhook, Copy, Check, Phone } from 'lucide-react';
+import { Loader2, Package, Sparkles, Webhook, Copy, Check, Phone, FileCode } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
@@ -61,6 +61,60 @@ export function ModulosConfig() {
   };
 
   const whatsappConfig = (franquia?.config_pagamento as any)?.whatsapp || null;
+
+  const [webhookUrl, setWebhookUrl] = useState('');
+  const [copied, setCopied] = useState(false);
+  const [whatsUrl, setWhatsUrl] = useState(whatsappConfig?.url || '');
+  const [whatsApiKey, setWhatsApiKey] = useState(whatsappConfig?.api_key || '');
+  const [whatsInstance, setWhatsInstance] = useState(whatsappConfig?.instance || '');
+
+  const APPS_SCRIPT_CODE = `function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    // Nome da aba: Unidade-DD/MM
+    var hoje = new Date();
+    var dataFormatada = Utilities.formatDate(hoje, "America/Sao_Paulo", "dd/MM");
+    var nomeAba = data.unidade + "-" + dataFormatada;
+    
+    // Verificar se a aba existe, senão criar
+    var sheet = ss.getSheetByName(nomeAba);
+    if (!sheet) {
+      sheet = ss.insertSheet(nomeAba);
+      // Adicionar cabeçalhos
+      sheet.appendRow([
+        "Horário Saída",
+        "Motoboy",
+        "Qtd. Entregas",
+        "Tipo BAG",
+        "Possui Bebida",
+        "Registrado em"
+      ]);
+      // Formatar cabeçalhos
+      sheet.getRange(1, 1, 1, 6).setFontWeight("bold");
+    }
+    
+    // Adicionar nova linha
+    sheet.appendRow([
+      data.horario_saida,
+      data.motoboy,
+      data.quantidade_entregas,
+      data.bag,
+      data.possui_bebida || "NAO",
+      new Date()
+    ]);
+    
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: true }))
+      .setMimeType(ContentService.MimeType.JSON);
+      
+  } catch (error) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: false, error: error.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}`;
 
   const savePromptsMutation = useMutation({
     mutationFn: async (payload: { entrega_chamada: string; entrega_bag: string }) => {
