@@ -701,6 +701,83 @@ export async function fetchSenhasPagamento(unidadeId: string): Promise<SenhaPaga
 }
 
 export async function chamarSenhaPagamento(senhaId: string) {
+  // Buscar detalhes da senha
+  const { data: senha, error: senhaError } = await supabase
+    .from('senhas_pagamento')
+    .select('id, numero_senha, unidade_id, franquia_id, entregador_id, entregador_nome')
+    .eq('id', senhaId)
+    .maybeSingle();
+
+  if (senhaError || !senha) {
+    throw senhaError || new Error('Senha não encontrada');
+  }
+
+  // Buscar unidade para obter nome_loja e franquia
+  const { data: unidade, error: unidadeError } = await supabase
+    .from('unidades')
+    .select('id, nome_loja, franquia_id')
+    .eq('id', senha.unidade_id)
+    .maybeSingle();
+
+  if (unidadeError) {
+    console.error('Erro ao buscar unidade da senha de pagamento:', unidadeError);
+  }
+
+  const franquiaId = (senha as any).franquia_id || unidade?.franquia_id || null;
+
+  // Buscar telefone e nome do entregador, se existir vínculo
+  let telefone: string | null = null;
+  let nomeMotoboy: string | null = senha.entregador_nome;
+
+  if (senha.entregador_id) {
+    const { data: entregador, error: entregadorError } = await supabase
+      .from('entregadores')
+      .select('telefone, nome')
+      .eq('id', senha.entregador_id)
+      .maybeSingle();
+
+    if (entregadorError) {
+      console.error('Erro ao buscar entregador da senha de pagamento:', entregadorError);
+    } else if (entregador) {
+      telefone = entregador.telefone as string;
+      nomeMotoboy = (entregador.nome as string) || nomeMotoboy;
+    }
+  }
+
+  // Buscar template de mensagem de pagamento na configuração da franquia
+  let mensagem = '';
+
+  if (franquiaId) {
+    const { data: franquia, error: franquiaError } = await supabase
+      .from('franquias')
+      .select('config_pagamento')
+      .eq('id', franquiaId)
+      .maybeSingle();
+
+    if (franquiaError) {
+      console.error('Erro ao buscar config_pagamento da franquia:', franquiaError);
+    } else if (franquia?.config_pagamento) {
+      const tvPrompts = (franquia.config_pagamento as any).tv_prompts || {};
+      const template: string =
+        tvPrompts.pagamento_chamada ||
+        'Olá {nome}, sua senha é {senha}. Dirija-se ao caixa da {unidade} para receber.';
+
+      mensagem = template
+        .replace('{nome}', nomeMotoboy || '')
+        .replace('{senha}', senha.numero_senha)
+        .replace('{unidade}', (unidade?.nome_loja as string) || '');
+    }
+  }
+
+  // Enviar WhatsApp se tivermos telefone e mensagem
+  if (telefone && mensagem) {
+    await sendWhatsAppMessage(telefone, mensagem, {
+      franquiaId: franquiaId,
+      unidadeId: senha.unidade_id,
+    });
+  }
+
+  // Atualizar status da senha para chamado
   const { error } = await supabase
     .from('senhas_pagamento')
     .update({
@@ -708,7 +785,7 @@ export async function chamarSenhaPagamento(senhaId: string) {
       chamado_em: new Date().toISOString(),
     })
     .eq('id', senhaId);
-  
+
   if (error) throw error;
 }
 
