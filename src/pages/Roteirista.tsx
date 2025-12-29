@@ -39,6 +39,7 @@ import { NotAppearedModal } from '@/components/NotAppearedModal';
 import { CallMotoboyModal } from '@/components/CallMotoboyModal';
 import { ReturnToQueueModal } from '@/components/ReturnToQueueModal';
 import { supabase } from '@/integrations/supabase/client';
+import { TvPaymentPreview } from '@/components/TvPaymentPreview';
 
 export default function Roteirista() {
   const { selectedUnit, setSelectedUnit } = useUnit();
@@ -451,8 +452,8 @@ export default function Roteirista() {
         )}
       </Button>
 
-      {/* Stats Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+      {/* Stats Row + TV preview */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="bg-card border border-border rounded-lg p-4">
           <div className="flex items-center gap-2 mb-1">
             <div className="w-3 h-3 rounded-full bg-status-available" />
@@ -474,6 +475,7 @@ export default function Roteirista() {
           </div>
           <p className="text-3xl font-bold font-mono">{deliveringQueue.length}</p>
         </div>
+        <TvPaymentPreview franquiaId={user?.franquiaId ?? null} unidadeNome={selectedUnit as any} />
       </div>
 
       {isLoading ? (
