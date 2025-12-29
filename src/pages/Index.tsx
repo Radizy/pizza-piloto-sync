@@ -78,7 +78,7 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
-      <div className="w-full max-w-xl bg-card border border-border rounded-2xl shadow-lg p-8 space-y-8">
+      <div className="w-full max-w-md sm:max-w-xl bg-card border border-border rounded-2xl shadow-lg p-6 sm:p-8 space-y-8">
         <header className="text-center space-y-2">
           <h1 className="text-2xl font-mono font-bold">{displayName}</h1>
           <p className="text-sm text-muted-foreground">
