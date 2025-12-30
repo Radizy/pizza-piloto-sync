@@ -137,7 +137,8 @@ export function useTTS(initialConfig?: Partial<TTSConfig> | null) {
               console.error('Falha no ElevenLabs TTS, seguindo sem áudio', err);
             }
           }
-          // Se cair aqui, faz fallback para implementação padrão do navegador
+          // Se cair aqui, faz fallback para implementação padrão do navegador,
+          // mas mapeando cada modelo ElevenLabs para um preset visivelmente diferente.
         }
 
         // Implementação especial para Google Translate TTS
