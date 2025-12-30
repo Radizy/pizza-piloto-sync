@@ -449,11 +449,13 @@ function TvTtsConfigSection({ franquiaId, initialConfig }: TvTtsConfigSectionPro
   const [enabled, setEnabled] = useState<boolean>(initialConfig?.enabled ?? true);
   const [voiceModel, setVoiceModel] = useState<string>(initialConfig?.voice_model ?? 'system');
   const [volume, setVolume] = useState<number>(initialConfig?.volume ?? 100);
+  const [elevenLabsKey, setElevenLabsKey] = useState<string>(initialConfig?.elevenlabs_api_key ?? '');
   const [testText, setTestText] = useState<string>('Senha 32, motoboy, é a sua vez de receber!');
   const { speak } = useTTS({
     enabled: true,
     volume,
     voice_model: voiceModel as any,
+    franquiaId,
   });
 
   const saveTtsMutation = useMutation({
@@ -473,6 +475,7 @@ function TvTtsConfigSection({ franquiaId, initialConfig }: TvTtsConfigSectionPro
           enabled,
           volume,
           voice_model: voiceModel,
+          elevenlabs_api_key: elevenLabsKey || null,
         },
       };
 
@@ -552,6 +555,21 @@ function TvTtsConfigSection({ franquiaId, initialConfig }: TvTtsConfigSectionPro
           <span className="w-10 text-xs text-right text-muted-foreground">{volume}%</span>
         </div>
       </div>
+
+      {(voiceModel.startsWith('elevenlabs_')) && (
+        <div className="space-y-2">
+          <Label>Chave da API ElevenLabs (desta franquia)</Label>
+          <Input
+            type="password"
+            value={elevenLabsKey}
+            onChange={(e) => setElevenLabsKey(e.target.value)}
+            placeholder="Cole aqui a chave da API ElevenLabs desta franquia"
+          />
+          <p className="text-[11px] text-muted-foreground mt-1">
+            Cada franquia pode usar sua própria conta ElevenLabs. A chave fica salva de forma segura no backend.
+          </p>
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label>Texto para teste rápido</Label>

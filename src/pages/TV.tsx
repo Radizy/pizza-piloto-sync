@@ -352,7 +352,11 @@ export default function TV() {
     voice_model: 'system' as const,
   };
 
-  const tvTtsConfig = (franquiaConfig?.config_pagamento as any)?.tv_tts || defaultTvTtsConfig;
+  const baseTvTtsConfig = (franquiaConfig?.config_pagamento as any)?.tv_tts || defaultTvTtsConfig;
+  const tvTtsConfig = {
+    ...baseTvTtsConfig,
+    franquiaId: user?.franquiaId,
+  };
 
   const buildTvTexts = (nome: string, bagName?: string, senha?: string) => {
     const chamadaTemplate = tvPrompts.entrega_chamada || defaultTvPrompts.entrega_chamada;
