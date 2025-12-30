@@ -206,17 +206,50 @@ export function useTTS(initialConfig?: Partial<TTSConfig> | null) {
           utterance.pitch = 1.1;
         } else {
           // Perfis ajustados conforme especificação, tentando sempre voz brasileira
-          const preferredVoice =
-            voices.find(
-              (voice) =>
-                (voice.lang === 'pt-BR' || voice.lang.startsWith('pt')) &&
-                /brazil|brasil/i.test(voice.name),
-            ) ||
-            voices.find((voice) => voice.lang === 'pt-BR' || voice.lang.startsWith('pt')) ||
-            voices[0];
+          const ptVoices = voices.filter((v) => v.lang === 'pt-BR' || v.lang.startsWith('pt'));
 
-          if (preferredVoice) {
-            utterance.voice = preferredVoice;
+          let chosenVoice: SpeechSynthesisVoice | null = null;
+
+          if (ptVoices.length > 0) {
+            // Se o navegador tiver mais de uma voz pt, usa vozes diferentes por modelo
+            if (activeConfig.voice_model === 'browser_clara') {
+              chosenVoice = ptVoices[0] || ptVoices[0];
+            } else if (activeConfig.voice_model === 'browser_grave') {
+              chosenVoice = ptVoices[1] || ptVoices[0];
+            } else if (activeConfig.voice_model === 'browser_rapido') {
+              chosenVoice = ptVoices[2] || ptVoices[0];
+            } else if (activeConfig.voice_model === 'browser_lento') {
+              chosenVoice = ptVoices[0];
+            } else if (activeConfig.voice_model === 'browser_enfatico') {
+              chosenVoice = ptVoices[1] || ptVoices[0];
+            } else if (activeConfig.voice_model === 'browser_suave') {
+              chosenVoice = ptVoices[0];
+            } else {
+              chosenVoice = ptVoices[0];
+            }
+          } else {
+            // Sem pt-BR, usa vozes globais diferentes para destacar bem
+            if (voices.length > 0) {
+              if (activeConfig.voice_model === 'browser_clara') {
+                chosenVoice = voices[0];
+              } else if (activeConfig.voice_model === 'browser_grave') {
+                chosenVoice = voices[1] || voices[0];
+              } else if (activeConfig.voice_model === 'browser_rapido') {
+                chosenVoice = voices[2] || voices[0];
+              } else if (activeConfig.voice_model === 'browser_lento') {
+                chosenVoice = voices[0];
+              } else if (activeConfig.voice_model === 'browser_enfatico') {
+                chosenVoice = voices[1] || voices[0];
+              } else if (activeConfig.voice_model === 'browser_suave') {
+                chosenVoice = voices[0];
+              } else {
+                chosenVoice = voices[0];
+              }
+            }
+          }
+
+          if (chosenVoice) {
+            utterance.voice = chosenVoice;
           }
 
           utterance.lang = 'pt-BR';
@@ -225,22 +258,28 @@ export function useTTS(initialConfig?: Partial<TTSConfig> | null) {
             utterance.rate = 0.95;
             utterance.pitch = 1.0;
           } else if (activeConfig.voice_model === 'browser_clara') {
+            // voz mais aguda e um pouco mais lenta
             utterance.rate = 0.9;
-            utterance.pitch = 1.1;
+            utterance.pitch = 1.2;
           } else if (activeConfig.voice_model === 'browser_grave') {
-            utterance.rate = 0.95;
-            utterance.pitch = 0.85;
+            // voz mais grave e um pouco mais lenta
+            utterance.rate = 0.85;
+            utterance.pitch = 0.7;
           } else if (activeConfig.voice_model === 'browser_suave') {
-            utterance.rate = 0.9;
+            // fala calma
+            utterance.rate = 0.8;
             utterance.pitch = 1.0;
           } else if (activeConfig.voice_model === 'browser_enfatico') {
-            utterance.rate = 1.05;
-            utterance.pitch = 1.1;
+            // fala rápida e com mais agudo
+            utterance.rate = 1.2;
+            utterance.pitch = 1.3;
           } else if (activeConfig.voice_model === 'browser_lento') {
-            utterance.rate = 0.8;
+            // bem devagar
+            utterance.rate = 0.7;
             utterance.pitch = 0.95;
           } else if (activeConfig.voice_model === 'browser_rapido') {
-            utterance.rate = 1.15;
+            // bem rápido
+            utterance.rate = 1.4;
             utterance.pitch = 1.0;
           }
         }
