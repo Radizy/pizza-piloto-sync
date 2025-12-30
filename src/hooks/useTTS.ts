@@ -5,6 +5,10 @@ export type TTSVoiceModel =
   | 'browser_default'
   | 'browser_clara'
   | 'browser_grave'
+  | 'browser_suave'
+  | 'browser_enfatico'
+  | 'browser_lento'
+  | 'browser_rapido'
   | 'google_tts';
 
 export interface TTSConfig {
@@ -124,12 +128,18 @@ export function useTTS(initialConfig?: Partial<TTSConfig> | null) {
           utterance.rate = 0.9;
           utterance.pitch = 1.1;
         } else {
-          // Perfis ajustados conforme especificação
-          const ptBrVoice =
-            voices.find((voice) => voice.lang === 'pt-BR' || voice.lang.startsWith('pt')) || voices[0];
+          // Perfis ajustados conforme especificação, tentando sempre voz brasileira
+          const preferredVoice =
+            voices.find(
+              (voice) =>
+                (voice.lang === 'pt-BR' || voice.lang.startsWith('pt')) &&
+                /brazil|brasil/i.test(voice.name),
+            ) ||
+            voices.find((voice) => voice.lang === 'pt-BR' || voice.lang.startsWith('pt')) ||
+            voices[0];
 
-          if (ptBrVoice) {
-            utterance.voice = ptBrVoice;
+          if (preferredVoice) {
+            utterance.voice = preferredVoice;
           }
 
           utterance.lang = 'pt-BR';
@@ -143,6 +153,18 @@ export function useTTS(initialConfig?: Partial<TTSConfig> | null) {
           } else if (activeConfig.voice_model === 'browser_grave') {
             utterance.rate = 0.95;
             utterance.pitch = 0.85;
+          } else if (activeConfig.voice_model === 'browser_suave') {
+            utterance.rate = 0.9;
+            utterance.pitch = 1.0;
+          } else if (activeConfig.voice_model === 'browser_enfatico') {
+            utterance.rate = 1.05;
+            utterance.pitch = 1.1;
+          } else if (activeConfig.voice_model === 'browser_lento') {
+            utterance.rate = 0.8;
+            utterance.pitch = 0.95;
+          } else if (activeConfig.voice_model === 'browser_rapido') {
+            utterance.rate = 1.15;
+            utterance.pitch = 1.0;
           }
         }
 
