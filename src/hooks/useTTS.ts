@@ -18,6 +18,8 @@ export interface TTSConfig {
   enabled: boolean;
   volume: number; // 0-100
   voice_model: TTSVoiceModel;
+  // Opcional: usado para buscar a config segura da franquia na função edge
+  franquiaId?: string;
 }
 
 const DEFAULT_TTS_CONFIG: TTSConfig = {
@@ -31,6 +33,7 @@ function normalizeConfig(config?: Partial<TTSConfig> | null): TTSConfig {
     enabled: config?.enabled ?? DEFAULT_TTS_CONFIG.enabled,
     volume: Math.min(100, Math.max(0, config?.volume ?? DEFAULT_TTS_CONFIG.volume)),
     voice_model: (config?.voice_model as TTSVoiceModel) ?? DEFAULT_TTS_CONFIG.voice_model,
+    franquiaId: config?.franquiaId,
   };
 }
 
@@ -90,7 +93,11 @@ export function useTTS(initialConfig?: Partial<TTSConfig> | null) {
                     apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
                     Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
                   },
-                  body: JSON.stringify({ text: safeText, voiceId }),
+                  body: JSON.stringify({
+                    text: safeText,
+                    voiceId,
+                    franquiaId: activeConfig.franquiaId,
+                  }),
                 },
               );
 
@@ -107,21 +114,23 @@ export function useTTS(initialConfig?: Partial<TTSConfig> | null) {
                 audio.onended = () => {
                   speakingRef.current = false;
                   URL.revokeObjectURL(url);
+                  resolve();
                 };
 
                 audio.onerror = (err) => {
                   console.error('Erro ao tocar áudio ElevenLabs', err);
                   speakingRef.current = false;
                   URL.revokeObjectURL(url);
+                  resolve();
                 };
 
                 await audio.play().catch((err) => {
                   console.error('Erro ao iniciar áudio ElevenLabs', err);
                   speakingRef.current = false;
                   URL.revokeObjectURL(url);
+                  resolve();
                 });
 
-                resolve();
                 return;
               }
             } catch (err) {
