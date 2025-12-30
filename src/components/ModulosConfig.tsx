@@ -522,14 +522,18 @@ function TvTtsConfigSection({ franquiaId, initialConfig }: TvTtsConfigSectionPro
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="system">TTS atual do sistema (fallback)</SelectItem>
-              <SelectItem value="browser_default">Browser SpeechSynthesis — pt-BR (Padrão)</SelectItem>
-              <SelectItem value="browser_clara">Browser SpeechSynthesis — pt-BR (Clara)</SelectItem>
-              <SelectItem value="browser_grave">Browser SpeechSynthesis — pt-BR (Grave)</SelectItem>
+              <SelectItem value="browser_default">Browser — pt-BR (Padrão)</SelectItem>
+              <SelectItem value="browser_clara">Browser — pt-BR (Clara)</SelectItem>
+              <SelectItem value="browser_grave">Browser — pt-BR (Grave)</SelectItem>
               <SelectItem value="google_tts">Google Translate TTS — pt-BR</SelectItem>
+              <SelectItem value="elevenlabs_voz_1">ElevenLabs — Voz BR 1 (mais suave)</SelectItem>
+              <SelectItem value="elevenlabs_voz_2">ElevenLabs — Voz BR 2 (jovem)</SelectItem>
+              <SelectItem value="elevenlabs_voz_3">ElevenLabs — Voz BR 3 (neutra)</SelectItem>
             </SelectContent>
           </Select>
           <p className="text-[11px] text-muted-foreground mt-1">
-            O modelo "Google Translate" usa o endpoint público do Google para frases curtas de chamada.
+            Navegador e Google são gratuitos. As opções ElevenLabs usam vozes humanas em pt-BR via sua
+            conta ElevenLabs.
           </p>
         </div>
       </div>
