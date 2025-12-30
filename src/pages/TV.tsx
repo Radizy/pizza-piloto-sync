@@ -313,10 +313,46 @@ export default function TV() {
   const defaultTvPrompts = {
     entrega_chamada: 'É a sua vez {nome}',
     entrega_bag: 'Pegue a {bag}',
-    pagamento_chamada: 'Senha {senha}\n{nome}, é a sua vez de receber!\nVá até o caixa imediatamente.',
+    pagamento_chamada:
+      'Senha {senha}\n{nome}, é a sua vez de receber!\nVá até o caixa imediatamente.',
   };
 
   const tvPrompts = (franquiaConfig?.config_pagamento as any)?.tv_prompts || defaultTvPrompts;
+
+  // Atualizar configuração de TTS em tempo real quando a franquia for alterada
+  useEffect(() => {
+    if (!user?.franquiaId) return;
+
+    const channel = supabase
+      .channel('tv-franquia-config')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'franquias',
+          filter: `id=eq.${user.franquiaId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({
+            queryKey: ['franquia-config-tv', user.franquiaId],
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.franquiaId, queryClient]);
+
+  const defaultTvTtsConfig = {
+    enabled: true,
+    volume: 100,
+    voice_model: 'system' as const,
+  };
+
+  const tvTtsConfig = (franquiaConfig?.config_pagamento as any)?.tv_tts || defaultTvTtsConfig;
 
   const buildTvTexts = (nome: string, bagName?: string, senha?: string) => {
     const chamadaTemplate = tvPrompts.entrega_chamada || defaultTvPrompts.entrega_chamada;
@@ -334,31 +370,33 @@ export default function TV() {
   };
 
   // Play audio and TTS quando alguém é chamado
-  const handleCallAnnouncement = useCallback(async (entregador: Entregador, hasBebida: boolean) => {
-    if (isMuted) return;
+  const handleCallAnnouncement = useCallback(
+    async (entregador: Entregador, hasBebida: boolean) => {
+      if (isMuted) return;
 
-    // Play sound first
-    if (audioRef.current) {
-      audioRef.current.currentTime = 0;
-      await audioRef.current.play().catch(() => {});
-    }
+      // Play sound first
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+        await audioRef.current.play().catch(() => {});
+      }
 
-    // Resolver nome amigável da BAG a partir do ID salvo no entregador
-    const bagId = entregador.tipo_bag;
-    const bagName = bagId
-      ? franquiaBagTipos.find((b) => b.id === bagId)?.nome || bagId
-      : '';
+      // Resolver nome amigável da BAG a partir do ID salvo no entregador
+      const bagId = entregador.tipo_bag;
+      const bagName = bagId ? franquiaBagTipos.find((b) => b.id === bagId)?.nome || bagId : '';
 
-    const { chamadaText, bagText } = buildTvTexts(entregador.nome, bagName || undefined);
+      const { chamadaText, bagText } = buildTvTexts(entregador.nome, bagName || undefined);
 
-    let ttsText = `${chamadaText}. ${bagText}.`;
-    
-    if (hasBebida) {
-      ttsText += ' Atenção! O pedido possui refrigerante!';
-    }
-    
-    await speak(ttsText);
-  }, [isMuted, speak, franquiaBagTipos, tvPrompts]);
+      let ttsText = `${chamadaText}. ${bagText}.`;
+
+      if (hasBebida) {
+        ttsText += ' Atenção! O pedido possui refrigerante!';
+      }
+
+      // Respeita configuração de TTS da franquia e limita duração
+      await speak(ttsText, tvTtsConfig);
+    },
+    [isMuted, speak, franquiaBagTipos, tvPrompts, tvTtsConfig],
+  );
 
 
   // Listen for realtime calls with bebida info (entregas)

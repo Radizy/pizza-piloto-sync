@@ -8,9 +8,12 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Package, Sparkles, Webhook, Copy, Check, Phone, FileCode } from 'lucide-react';
+import { Loader2, Package, Sparkles, Webhook, Copy, Check, Phone, FileCode, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { Slider } from '@/components/ui/slider';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useTTS } from '@/hooks/useTTS';
 
 interface Modulo {
   id: string;
@@ -58,7 +61,14 @@ export function ModulosConfig() {
   const tvPrompts = (franquia?.config_pagamento as any)?.tv_prompts || {
     entrega_chamada: 'É a sua vez {nome}',
     entrega_bag: 'Pegue a {bag}',
-    pagamento_chamada: 'Olá {nome}, sua senha é {senha}. Dirija-se ao caixa da {unidade} para receber.',
+    pagamento_chamada:
+      'Olá {nome}, sua senha é {senha}. Dirija-se ao caixa da {unidade} para receber.',
+  };
+
+  const tvTtsConfig = (franquia?.config_pagamento as any)?.tv_tts || {
+    enabled: true,
+    volume: 100,
+    voice_model: 'system',
   };
 
   const whatsappConfig = (franquia?.config_pagamento as any)?.whatsapp || null;
@@ -199,11 +209,15 @@ export function ModulosConfig() {
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-primary" />
-                <span className="text-sm font-semibold">Textos da animação da TV (por franquia)</span>
+                <span className="text-sm font-semibold">
+                  Textos da animação da TV (por franquia)
+                </span>
               </div>
-                <p className="text-xs text-muted-foreground">
-                  Use <code>{'{nome}'}</code> para o nome do motoboy, <code>{'{bag}'}</code> para o nome da bag, <code>{'{senha}'}</code> para o número da senha e <code>{'{unidade}'}</code> para o nome da loja.
-                </p>
+              <p className="text-xs text-muted-foreground">
+                Use <code>{'{nome}'}</code> para o nome do motoboy, <code>{'{bag}'}</code> para o
+                nome da bag, <code>{'{senha}'}</code> para o número da senha e <code>{'{unidade}'}</code>
+                {' '}para o nome da loja.
+              </p>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="tv-entrega-chamada">Frase de chamada de entrega (TV)</Label>
@@ -235,7 +249,9 @@ export function ModulosConfig() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="tv-pagamento-chamada">Frase de chamada para pagamento (WhatsApp/TV)</Label>
+                <Label htmlFor="tv-pagamento-chamada">
+                  Frase de chamada para pagamento (WhatsApp/TV)
+                </Label>
                 <Input
                   id="tv-pagamento-chamada"
                   defaultValue={tvPrompts.pagamento_chamada}
@@ -248,6 +264,12 @@ export function ModulosConfig() {
                   }
                 />
               </div>
+
+              {/* Configuração de voz da chamada (TTS) */}
+              <TvTtsConfigSection
+                franquiaId={user.franquiaId!}
+                initialConfig={tvTtsConfig}
+              />
             </div>
 
             {/* Integração Planilha (Google Sheets) */}
@@ -414,5 +436,148 @@ export function ModulosConfig() {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+interface TvTtsConfigSectionProps {
+  franquiaId: string;
+  initialConfig: any;
+}
+
+function TvTtsConfigSection({ franquiaId, initialConfig }: TvTtsConfigSectionProps) {
+  const queryClient = useQueryClient();
+  const [enabled, setEnabled] = useState<boolean>(initialConfig?.enabled ?? true);
+  const [voiceModel, setVoiceModel] = useState<string>(initialConfig?.voice_model ?? 'system');
+  const [volume, setVolume] = useState<number>(initialConfig?.volume ?? 100);
+  const [testText, setTestText] = useState<string>('Senha 32, motoboy, é a sua vez de receber!');
+  const { speak } = useTTS({
+    enabled: true,
+    volume,
+    voice_model: voiceModel as any,
+  });
+
+  const saveTtsMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase
+        .from('franquias')
+        .select('config_pagamento')
+        .eq('id', franquiaId)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      const currentCfg = (data?.config_pagamento as any) || {};
+      const newCfg = {
+        ...currentCfg,
+        tv_tts: {
+          enabled,
+          volume,
+          voice_model: voiceModel,
+        },
+      };
+
+      const { error: updateError } = await supabase
+        .from('franquias')
+        .update({ config_pagamento: newCfg })
+        .eq('id', franquiaId);
+
+      if (updateError) throw updateError;
+    },
+    onSuccess: () => {
+      toast.success('Configuração de voz da TV salva com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['franquia-config-tv', franquiaId] });
+    },
+    onError: () => {
+      toast.error('Erro ao salvar configuração de voz da TV');
+    },
+  });
+
+  return (
+    <div className="mt-6 border-t border-border pt-6 space-y-4">
+      <div className="flex items-center gap-2">
+        <Volume2 className="w-4 h-4 text-primary" />
+        <span className="text-sm font-semibold">Voz da Chamada (TTS)</span>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Escolha o modelo de voz para as chamadas na TV. A alteração é aplicada automaticamente nas TVs
+        conectadas. Todas as opções usam voz em português do Brasil e não geram custo adicional.
+      </p>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-2">
+          <Label>Ativar voz</Label>
+          <div className="flex items-center gap-3">
+            <Switch checked={enabled} onCheckedChange={setEnabled} />
+            <span className="text-xs text-muted-foreground">
+              Quando desativado, apenas a animação visual será exibida na TV.
+            </span>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Modelo de voz</Label>
+          <Select value={voiceModel} onValueChange={setVoiceModel}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione o modelo de voz" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="system">TTS atual do sistema (fallback)</SelectItem>
+              <SelectItem value="browser_default">Browser SpeechSynthesis — pt-BR (Padrão)</SelectItem>
+              <SelectItem value="browser_clara">Browser SpeechSynthesis — pt-BR (Clara)</SelectItem>
+              <SelectItem value="browser_grave">Browser SpeechSynthesis — pt-BR (Grave)</SelectItem>
+              <SelectItem value="google_tts">Google Translate TTS — pt-BR</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            O modelo "Google Translate" usa o endpoint público do Google para frases curtas de chamada.
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Volume</Label>
+        <div className="flex items-center gap-4">
+          <Slider
+            value={[volume]}
+            min={0}
+            max={100}
+            step={5}
+            onValueChange={([v]) => setVolume(v)}
+            className="flex-1"
+          />
+          <span className="w-10 text-xs text-right text-muted-foreground">{volume}%</span>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Texto para teste rápido</Label>
+        <Input
+          value={testText}
+          onChange={(e) => setTestText(e.target.value)}
+          placeholder="Digite um texto curto para testar a voz"
+        />
+        <div className="flex gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => speak(testText || 'Senha 32, motoboy, é a sua vez de receber!')}
+          >
+            Testar voz
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => saveTtsMutation.mutate()}
+            disabled={saveTtsMutation.isPending}
+          >
+            {saveTtsMutation.isPending ? 'Salvando...' : 'Salvar'}
+          </Button>
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          A alteração é aplicada automaticamente nas TVs conectadas, sem precisar recarregar a tela.
+        </p>
+      </div>
+    </div>
   );
 }
