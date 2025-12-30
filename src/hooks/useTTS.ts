@@ -9,7 +9,10 @@ export type TTSVoiceModel =
   | 'browser_enfatico'
   | 'browser_lento'
   | 'browser_rapido'
-  | 'google_tts';
+  | 'google_tts'
+  | 'elevenlabs_voz_1'
+  | 'elevenlabs_voz_2'
+  | 'elevenlabs_voz_3';
 
 export interface TTSConfig {
   enabled: boolean;
@@ -43,7 +46,7 @@ export function useTTS(initialConfig?: Partial<TTSConfig> | null) {
 
   const speak = useCallback(
     (text: string, overrideConfig?: Partial<TTSConfig> | null): Promise<void> => {
-      return new Promise((resolve) => {
+      return new Promise(async (resolve) => {
         const activeConfig = normalizeConfig(overrideConfig ?? configRef.current);
 
         if (!activeConfig.enabled) {
@@ -62,6 +65,70 @@ export function useTTS(initialConfig?: Partial<TTSConfig> | null) {
           googleAudioRef.current.pause();
           googleAudioRef.current.currentTime = 0;
           googleAudioRef.current = null;
+        }
+
+        // Implementação especial para ElevenLabs TTS (vozes mais humanas)
+        if (activeConfig.voice_model.startsWith('elevenlabs_')) {
+          const voiceIdMap: Record<string, string> = {
+            elevenlabs_voz_1: 'XrExE9yKIg1WjnnlVkGX', // Matilda - voz mais suave
+            elevenlabs_voz_2: 'SAz9YHcvj6GT2YYXdXww', // River - voz mais jovem
+            elevenlabs_voz_3: 'TX3LPaxmHKxFdv7VOQHJ', // Liam - voz mais neutra
+          };
+
+          const voiceId = voiceIdMap[activeConfig.voice_model];
+
+          if (!voiceId) {
+            console.warn('Modelo ElevenLabs desconhecido, usando fallback do navegador');
+          } else {
+            try {
+              const response = await fetch(
+                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+                    Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+                  },
+                  body: JSON.stringify({ text: safeText, voiceId }),
+                },
+              );
+
+              if (!response.body || !response.ok) {
+                console.error('Falha ao chamar ElevenLabs TTS');
+              } else {
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const audio = new Audio(url);
+                googleAudioRef.current = audio;
+                audio.volume = activeConfig.volume / 100;
+                speakingRef.current = true;
+
+                audio.onended = () => {
+                  speakingRef.current = false;
+                  URL.revokeObjectURL(url);
+                };
+
+                audio.onerror = (err) => {
+                  console.error('Erro ao tocar áudio ElevenLabs', err);
+                  speakingRef.current = false;
+                  URL.revokeObjectURL(url);
+                };
+
+                await audio.play().catch((err) => {
+                  console.error('Erro ao iniciar áudio ElevenLabs', err);
+                  speakingRef.current = false;
+                  URL.revokeObjectURL(url);
+                });
+
+                resolve();
+                return;
+              }
+            } catch (err) {
+              console.error('Falha no ElevenLabs TTS, seguindo sem áudio', err);
+            }
+          }
+          // Se cair aqui, faz fallback para implementação padrão do navegador
         }
 
         // Implementação especial para Google Translate TTS
